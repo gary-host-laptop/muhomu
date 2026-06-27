@@ -1,0 +1,19 @@
+# Binaries
+mutabu
+*.exe
+*.dll
+*.so
+*.dylib
+
+# Data (keep if you want to track settings/images? usually exclude)
+data/
+*.db
+*.sqlite
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db

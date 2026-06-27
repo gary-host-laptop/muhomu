@@ -1,0 +1,15 @@
+services:
+  mutabu:
+    build: .
+    ports:
+      - "4444:4444"
+    volumes:
+      - mutabu-data:/data
+    restart: unless-stopped
+    environment:
+      - PORT=4444
+      - DATA_DIR=/data
+      - STATIC_DIR=/app/static
+
+volumes:
+  mutabu-data:
