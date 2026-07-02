@@ -1,11 +1,17 @@
 /* ── TIMER ───────────────────────────────────────────────────── */
 (function () {
   const display = document.getElementById("timer-display");
+  if (!display) return; // widget not in DOM
   const minInput = document.getElementById("timer-min");
   const secInput = document.getElementById("timer-sec");
   const startBtn = document.getElementById("timer-start");
   const resetBtn = document.getElementById("timer-reset");
-  const alarm = new Audio("/static/assets/sounds/alarm.mp3");
+  // Lazy — only created when timer actually fires, not on page load.
+  let alarm = null;
+  function getAlarm() {
+    if (!alarm) alarm = new Audio("/static/assets/sounds/alarm.mp3");
+    return alarm;
+  }
 
   let total = 0;
   let remaining = 0;
@@ -54,8 +60,8 @@
       render(remaining);
       if (remaining <= 0) {
         stop();
-        alarm.currentTime = 0;
-        alarm.play();
+        getAlarm().currentTime = 0;
+        getAlarm().play();
         display.classList.add("urgent");
       }
     }, 1000);
@@ -63,47 +69,43 @@
 
   resetBtn.addEventListener("click", () => {
     stop();
-    alarm.pause();
-    alarm.currentTime = 0;
+    if (alarm) { alarm.pause(); alarm.currentTime = 0; }
     remaining = 0;
     render(0);
     minInput.value = 0;
     secInput.value = 0;
     display.classList.remove("urgent");
   });
+
+  // timer-trash button triggers the same reset logic
+  const trashBtn = document.getElementById("timer-trash");
+  if (trashBtn) trashBtn.addEventListener("click", () => resetBtn.click());
 })();
 
 /* ── RAIN PLAYER ────────────────────────────────────────────── */
 (function () {
+  if (!document.getElementById("vol-rain")) return; // widget not in DOM
   const tracks = {
-    rain: {
-      file: "/static/assets/sounds/heavy-rain.mp3",
-      loop: true,
-      id: "vol-rain",
-    },
-    wind: {
-      file: "/static/assets/sounds/wind.mp3",
-      loop: true,
-      id: "vol-wind",
-    },
-    thunder: {
-      file: "/static/assets/sounds/thunder.mp3",
-      loop: false,
-      id: "vol-thunder",
-    },
+    rain:    { file: "/static/assets/sounds/heavy-rain.mp3", loop: true,  id: "vol-rain",    audio: null },
+    wind:    { file: "/static/assets/sounds/wind.mp3",       loop: true,  id: "vol-wind",    audio: null },
+    thunder: { file: "/static/assets/sounds/thunder.mp3",    loop: false, id: "vol-thunder", audio: null },
   };
 
-  // Create audio elements
-  Object.values(tracks).forEach((t) => {
-    t.audio = new Audio(t.file);
-    t.audio.loop = t.loop;
-    t.audio.volume = parseFloat(document.getElementById(t.id).value);
-  });
+  // Lazy init — only create Audio objects on first play,
+  // not on page load. Avoids buffering 3 audio files into
+  // memory for users who never use the rain player.
+  function initAudio() {
+    Object.values(tracks).forEach((t) => {
+      if (t.audio) return;
+      t.audio = new Audio(t.file);
+      t.audio.loop = t.loop;
+      t.audio.volume = parseFloat(document.getElementById(t.id).value);
+    });
+  }
 
   let playing = false;
-
-  // Thunder fires randomly every 20–60s when playing
   let thunderTimer = null;
+
   function scheduleThunder() {
     const delay = 20000 + Math.random() * 40000;
     thunderTimer = setTimeout(() => {
@@ -118,13 +120,22 @@
   const btn = document.getElementById("rain-btn");
 
   btn.addEventListener("click", () => {
+    initAudio(); // create Audio objects only now if not already done
     if (!playing) {
-      tracks.rain.audio.play();
-      tracks.wind.audio.play();
-      scheduleThunder();
-      btn.querySelector("i").className = "ph-light ph-stop";
-      btn.classList.add("playing");
-      playing = true;
+      const playRain = tracks.rain.audio.play();
+      const playWind = tracks.wind.audio.play();
+      Promise.all([playRain, playWind])
+        .then(() => {
+          scheduleThunder();
+          btn.querySelector("i").className = "ph-light ph-stop";
+          btn.classList.add("playing");
+          playing = true;
+        })
+        .catch(() => {
+          btn.querySelector("i").className = "ph-light ph-stop";
+          btn.classList.add("playing");
+          playing = true;
+        });
     } else {
       tracks.rain.audio.pause();
       tracks.wind.audio.pause();
@@ -136,25 +147,25 @@
     }
   });
 
-  // Master volume
   let masterVol = 1;
-  document.getElementById("vol-master").addEventListener("input", (e) => {
+  document.getElementById("vol-master")?.addEventListener("input", (e) => {
     masterVol = parseFloat(e.target.value);
     Object.values(tracks).forEach((t) => {
+      if (!t.audio) return;
       const trackVol = parseFloat(document.getElementById(t.id).value);
       t.audio.volume = trackVol * masterVol;
     });
   });
 
-  // Volume sliders
-  Object.entries(tracks).forEach(([key, t]) => {
+  Object.entries(tracks).forEach(([, t]) => {
     document.getElementById(t.id).addEventListener("input", (e) => {
+      if (!t.audio) return;
       t.audio.volume = parseFloat(e.target.value) * masterVol;
     });
   });
 })();
 
-/* ── PROFILE IMAGE ROTATION handled by applySettings below ─────── */
+/* ── PROFILE IMAGE is set server-side in the template ─────────── */
 
 /* ── CLOCK ───────────────────────────────────────────────────── */
 function pad(n) {
@@ -216,7 +227,9 @@ function setGreeting(el, text) {
 let binaryClock = false;
 
 /* ── DRAG AND DROP SORT ─────────────────────────────────────── */
+/* getData/setData are sync functions operating on in-memory arrays. */
 function enableDragSort(container, itemSelector, getData, setData, reload) {
+  if (!container) return;
   let dragSrc = null;
   container.addEventListener("dragstart", (e) => {
     if (!document.body.classList.contains("edit-mode")) return;
@@ -243,16 +256,16 @@ function enableDragSort(container, itemSelector, getData, setData, reload) {
         .forEach((el) => el.classList.remove("drag-over"));
     }
   });
-  container.addEventListener("drop", async (e) => {
+  container.addEventListener("drop", (e) => {
     e.preventDefault();
     const target = e.target.closest(itemSelector);
     if (!target || !dragSrc || target === dragSrc) return;
     const srcIdx = parseInt(dragSrc.dataset.dragIndex);
     const tgtIdx = parseInt(target.dataset.dragIndex);
-    const arr = await getData();
+    const arr = getData();
     const [moved] = arr.splice(srcIdx, 1);
     arr.splice(tgtIdx, 0, moved);
-    await setData(arr);
+    setData(arr);
     dragSrc = null;
     reload();
   });
@@ -322,10 +335,11 @@ document.getElementById("clock").addEventListener("click", () => {
   if (!binaryClock) el.innerHTML = "";
 });
 
-// Defaults — applySettings will overwrite these from storage.
-// Set before tick() so the very first render is already correct.
-window._clockFormat = "24h";
-window._clockSeconds = true;
+// Read clock settings from body data attributes (set by server in template).
+// Falls back to 24h / show seconds if attributes are absent.
+window._clockFormat  = document.body.dataset.clockFormat  || "24h";
+window._clockSeconds = document.body.dataset.clockSeconds !== "false";
+window._uiLang       = document.body.dataset.uiLang       || "en";
 
 function tick() {
   const now = new Date();
@@ -392,19 +406,9 @@ document.getElementById("search-input").addEventListener("keydown", (e) => {
 });
 
 /* ── STORAGE HELPER ─────────────────────────────────────────────
-   Uses Go API server at /api/data for all storage operations */
+   Write-only from the client. The server renders all initial state.
+   JS only posts mutations; the next page load reflects them via SSR. */
 const Store = {
-  async get(key) {
-    try {
-      const r = await fetch("/api/data");
-      const data = await r.json();
-      return data[key] ?? null;
-    } catch {
-      // Fallback to localStorage
-      const v = localStorage.getItem(key);
-      return v ? JSON.parse(v) : null;
-    }
-  },
   async set(key, val) {
     try {
       await fetch("/api/data", {
@@ -413,39 +417,27 @@ const Store = {
         body: JSON.stringify({ [key]: val }),
       });
     } catch {
-      // Fallback to localStorage
       localStorage.setItem(key, JSON.stringify(val));
-    }
-  },
-  async getAll() {
-    try {
-      const r = await fetch("/api/data");
-      return await r.json();
-    } catch {
-      const result = {};
-      for (let i = 0; i < localStorage.length; i++) {
-        const key = localStorage.key(i);
-        try {
-          result[key] = JSON.parse(localStorage.getItem(key));
-        } catch {}
-      }
-      return result;
     }
   },
 };
 
 /* ── NOTES ──────────────────────────────────────────────────── */
 const notesEl = document.getElementById("notes");
-Store.get("nt_notes").then((v) => {
-  notesEl.value = v || "";
-});
-notesEl.addEventListener("input", () => Store.set("nt_notes", notesEl.value));
-document.getElementById("notes-clear").addEventListener("click", async () => {
-  if (confirm("clear notes?")) {
-    notesEl.value = "";
-    await Store.set("nt_notes", "");
-  }
-});
+if (notesEl) {
+  let notesSaveTimer = null;
+  notesEl.addEventListener("input", () => {
+    clearTimeout(notesSaveTimer);
+    notesSaveTimer = setTimeout(() => Store.set("nt_notes", notesEl.value), 800);
+  });
+  document.getElementById("notes-clear")?.addEventListener("click", async () => {
+    if (confirm("clear notes?")) {
+      clearTimeout(notesSaveTimer);
+      notesEl.value = "";
+      await Store.set("nt_notes", "");
+    }
+  });
+}
 
 /* ── CONTEXT MENU ───────────────────────────────────────────────
    Usage: CtxMenu.show(e, [ {label, action, danger?} ])           */
@@ -562,12 +554,7 @@ document.getElementById("settings-btn").addEventListener("click", () => {
   window.location.href = "/static/settings.html";
 });
 
-/* ── BOOKMARKS ─────────────────────────────────────────────────
-   Stored under key 'nt_bookmarks'. Seeded from defaults on first load. */
-/* BM_DEFAULTS is defined in data/defaults.js */
-
-/* ── FAVICON AUTO-FETCH ─────────────────────────────────────────
-   Uses DuckDuckGo's favicon service — privacy-respecting, no ad tracking. */
+/* ── FAVICON AUTO-FETCH ─────────────────────────────────────── */
 function guessFavicon(url) {
   try {
     const { hostname } = new URL(url);
@@ -577,10 +564,307 @@ function guessFavicon(url) {
   }
 }
 
-/* ── SHARED LINK DIALOG ─────────────────────────────────────────
-   Used by both bookmarks and quick access.
-   prefill = {label, url, fav} for edit mode, omit for add.
-   Resolves {label, url, fav} on save, 'delete' on delete, null on cancel. */
+/* ── SHARED LINK DIALOG ──────────────────────────────────────── */
+function linkPrompt(prefill) {
+  const isEdit = !!prefill;
+  return new Promise((resolve) => {
+    const overlay = document.createElement("div");
+    overlay.style.cssText = `position:fixed;inset:0;z-index:10000;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.65)`;
+    const box = document.createElement("div");
+    box.style.cssText = `background:var(--panel);border:1px solid var(--border-lt);padding:18px;display:flex;flex-direction:column;gap:10px;min-width:300px;clip-path:polygon(0 0,100% 0,100% calc(100% - 10px),calc(100% - 14px) 100%,0 100%)`;
+    const s = (el, css) => { el.style.cssText = css; return el; };
+    const inp = (ph) => {
+      const i = document.createElement("input");
+      i.type = "text";
+      i.placeholder = ph;
+      s(i, `background:var(--panel2);border:1px solid var(--border);color:var(--white);font-family:var(--font-pixel);font-size:11px;padding:6px 10px;outline:none;width:100%;transition:border-color 0.1s`);
+      i.addEventListener("focus", () => (i.style.borderColor = "var(--accent)"));
+      i.addEventListener("blur",  () => (i.style.borderColor = "var(--border)"));
+      return i;
+    };
+    const labelInp = inp("label");
+    const urlInp   = inp("https://...");
+    const favInp   = inp("favicon url (optional override)");
+    if (isEdit) {
+      labelInp.value = prefill.label || "";
+      urlInp.value   = prefill.url   || "";
+      favInp.value   = prefill.fav   || "";
+    }
+    const previewRow = document.createElement("div");
+    s(previewRow, `display:flex;align-items:center;gap:10px;padding:8px;background:var(--panel2);border:1px solid var(--border)`);
+    const previewImg = document.createElement("img");
+    s(previewImg, `width:24px;height:24px;object-fit:contain;display:none`);
+    const previewLetter = document.createElement("div");
+    s(previewLetter, `width:24px;height:24px;display:flex;align-items:center;justify-content:center;background:var(--panel);border:1px solid var(--border-lt);color:var(--dim);font-family:var(--font-pixel);font-size:12px;text-transform:uppercase;flex-shrink:0`);
+    previewLetter.textContent = "?";
+    const previewLabel = document.createElement("span");
+    s(previewLabel, `font-family:var(--font-pixel);font-size:11px;color:var(--dimmer);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap`);
+    previewLabel.textContent = "preview";
+    const fetchStatus = document.createElement("span");
+    s(fetchStatus, `font-family:var(--font-pixel);font-size:9px;color:var(--dimmer);flex-shrink:0`);
+    previewRow.appendChild(previewImg);
+    previewRow.appendChild(previewLetter);
+    previewRow.appendChild(previewLabel);
+    previewRow.appendChild(fetchStatus);
+    function showFav(src, lbl) {
+      previewImg.src = src;
+      previewImg.style.display = "block";
+      previewLetter.style.display = "none";
+      previewImg.onerror = () => {
+        previewImg.style.display = "none";
+        previewLetter.style.display = "flex";
+        previewLetter.textContent = (lbl || "?")[0];
+        fetchStatus.textContent = "no favicon";
+      };
+      previewImg.onload = () => { fetchStatus.textContent = ""; };
+    }
+    function updatePreview() {
+      const lbl = labelInp.value.trim();
+      previewLabel.textContent = lbl || "preview";
+      previewLetter.textContent = (lbl || "?")[0];
+      const override = favInp.value.trim();
+      if (override) { fetchStatus.textContent = ""; showFav(override, lbl); }
+      else {
+        const auto = guessFavicon(urlInp.value.trim());
+        if (auto) { fetchStatus.textContent = "auto"; showFav(auto, lbl); }
+        else { previewImg.style.display = "none"; previewLetter.style.display = "flex"; fetchStatus.textContent = ""; }
+      }
+    }
+    urlInp.addEventListener("blur", () => {
+      const url = urlInp.value.trim();
+      if (!url) return;
+      if (!labelInp.value.trim()) {
+        try { const host = new URL(url).hostname.replace(/^www\./, ""); labelInp.value = host.split(".")[0]; } catch {}
+      }
+      updatePreview();
+    });
+    urlInp.addEventListener("input", updatePreview);
+    favInp.addEventListener("input", updatePreview);
+    labelInp.addEventListener("input", () => {
+      const lbl = labelInp.value.trim();
+      previewLabel.textContent = lbl || "preview";
+      previewLetter.textContent = (lbl || "?")[0];
+    });
+    const btnRow = document.createElement("div");
+    s(btnRow, `display:flex;gap:8px;justify-content:flex-end`);
+    const finish = (result) => { document.body.removeChild(overlay); resolve(result); };
+    if (isEdit) {
+      const del = document.createElement("button");
+      del.textContent = "delete";
+      del.className = "timer-btn";
+      del.style.cssText = `margin-right:auto;color:var(--red);border-color:var(--red)`;
+      del.addEventListener("click", () => finish("delete"));
+      btnRow.appendChild(del);
+    }
+    const cancel = document.createElement("button");
+    cancel.textContent = "cancel";
+    cancel.className = "timer-btn";
+    const ok = document.createElement("button");
+    ok.textContent = isEdit ? "save" : "add";
+    ok.className = "timer-btn";
+    btnRow.appendChild(cancel);
+    btnRow.appendChild(ok);
+    box.appendChild(labelInp);
+    box.appendChild(urlInp);
+    box.appendChild(favInp);
+    box.appendChild(previewRow);
+    box.appendChild(btnRow);
+    overlay.appendChild(box);
+    document.body.appendChild(overlay);
+    labelInp.focus();
+    if (isEdit) updatePreview();
+    ok.addEventListener("click", () => {
+      const label = labelInp.value.trim();
+      const url   = urlInp.value.trim();
+      if (!label || !url) return;
+      const fav = favInp.value.trim() || guessFavicon(url);
+      finish({ label, url, fav });
+    });
+    cancel.addEventListener("click", () => finish(null));
+    overlay.addEventListener("keydown", (e) => {
+      if (e.key === "Enter")  ok.click();
+      if (e.key === "Escape") cancel.click();
+    });
+  });
+}
+
+const bookmarkAddPrompt = linkPrompt;
+
+/* ── BOOKMARKS ─────────────────────────────────────────────────
+   In-memory state seeded from server-injected __INITIAL_DATA__.
+   All mutations update _bmData then save to API. Re-render rebuilds
+   the DOM from _bmData (no server round-trip needed for edits).     */
+/* BM_DEFAULTS is defined in data/defaults.js */
+
+let _bmData = (window.__INITIAL_DATA__ && window.__INITIAL_DATA__.nt_bookmarks)
+  ? window.__INITIAL_DATA__.nt_bookmarks
+  : BM_DEFAULTS;
+
+async function saveBm() {
+  await Store.set("nt_bookmarks", _bmData);
+}
+
+async function loadBookmarks() {
+  const list = document.getElementById("folder-list");
+
+  const openFolders = new Set();
+  list.querySelectorAll("details.folder").forEach((el, i) => {
+    if (el.open) openFolders.add(i);
+  });
+
+  list.innerHTML = "";
+
+  _bmData.forEach((folder, fi) => {
+    const details = document.createElement("details");
+    details.className = "folder";
+    details.draggable = true;
+    details.dataset.dragIndex = fi;
+
+    const summary = document.createElement("summary");
+    summary.className = "folder-head";
+    const icon = document.createElement("span");
+    icon.className = "folder-icon";
+    icon.textContent = "◈";
+    summary.appendChild(icon);
+    summary.appendChild(document.createTextNode(" " + folder.folder));
+
+    const headBtns = document.createElement("span");
+    headBtns.className = "folder-head-btns";
+
+    const addLinkBtn = document.createElement("button");
+    addLinkBtn.className = "folder-head-btn";
+    addLinkBtn.innerHTML = '<i class="ph-light ph-plus"></i>';
+    addLinkBtn.title = "add link";
+    addLinkBtn.addEventListener("click", async (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const r = await bookmarkAddPrompt();
+      if (!r || r === "delete") return;
+      _bmData[fi].links.push({ label: r.label, url: r.url, fav: r.fav });
+      await saveBm();
+      loadBookmarks();
+    });
+
+    const editFolderBtn = document.createElement("button");
+    editFolderBtn.className = "folder-head-btn";
+    editFolderBtn.innerHTML = '<i class="ph-light ph-pencil-simple"></i>';
+    editFolderBtn.title = "edit folder";
+    editFolderBtn.addEventListener("click", async (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const r = await miniPrompt(
+        [{ key: "name", placeholder: "folder name" }],
+        { name: _bmData[fi].folder },
+        { deletable: true },
+      );
+      if (!r) return;
+      if (r === "delete") {
+        _bmData.splice(fi, 1);
+      } else if (r.name) {
+        _bmData[fi].folder = r.name;
+      }
+      await saveBm();
+      loadBookmarks();
+    });
+
+    headBtns.appendChild(editFolderBtn);
+    headBtns.appendChild(addLinkBtn);
+    summary.appendChild(headBtns);
+    details.appendChild(summary);
+
+    const linksDiv = document.createElement("div");
+    linksDiv.className = "folder-links grid";
+
+    folder.links.forEach((link, li) => {
+      const a = document.createElement("a");
+      a.href = link.url;
+      a.target = "_blank";
+      a.className = "fav-tile";
+      a.draggable = true;
+      a.dataset.dragIndex = li;
+
+      const img = document.createElement("img");
+      img.className = "fav";
+      img.src = link.fav || guessFavicon(link.url);
+      img.alt = "";
+      img.addEventListener("error", () => {
+        const letter = document.createElement("div");
+        letter.className = "fav-letter";
+        letter.textContent = (link.label || "?")[0];
+        img.replaceWith(letter);
+      });
+
+      const label = document.createElement("span");
+      label.textContent = link.label;
+
+      const edit = document.createElement("button");
+      edit.className = "tile-edit";
+      edit.innerHTML = '<i class="ph-light ph-pencil-simple"></i>';
+      edit.title = "edit";
+      edit.addEventListener("click", async (e) => {
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        const current = _bmData[fi].links[li];
+        const r = await bookmarkAddPrompt({
+          label: current.label,
+          url: current.url,
+          fav: current.fav,
+        });
+        if (!r) return;
+        if (r === "delete") {
+          _bmData[fi].links.splice(li, 1);
+        } else {
+          _bmData[fi].links[li] = { label: r.label, url: r.url, fav: r.fav };
+        }
+        await saveBm();
+        loadBookmarks();
+      });
+      edit.addEventListener("mousedown", (e) => e.stopImmediatePropagation());
+      edit.addEventListener("mouseup", (e) => e.stopImmediatePropagation());
+
+      a.appendChild(img);
+      a.appendChild(label);
+      a.appendChild(edit);
+      linksDiv.appendChild(a);
+    });
+
+    details.appendChild(linksDiv);
+    enableDragSort(
+      linksDiv,
+      "a[data-drag-index]",
+      () => _bmData[fi].links,
+      (arr) => { _bmData[fi].links = arr; saveBm(); },
+      loadBookmarks,
+    );
+    if (openFolders.has(fi)) details.open = true;
+    list.appendChild(details);
+  });
+}
+
+const folderList = document.getElementById("folder-list");
+if (folderList) {
+  enableDragSort(
+    folderList,
+    "details[data-drag-index]",
+    () => _bmData,
+    (arr) => { _bmData = arr; saveBm(); },
+    loadBookmarks,
+  );
+}
+
+// Run on load to wire up all event listeners.
+// SSR gave us the structure; js takes over for interactivity.
+loadBookmarks();
+
+document
+  .getElementById("bm-add-folder-btn")
+  .addEventListener("click", async () => {
+    const r = await miniPrompt([{ key: "name", placeholder: "folder name" }]);
+    if (!r || !r.name) return;
+    _bmData.push({ folder: r.name, links: [] });
+    await saveBm();
+    loadBookmarks();
+  });
 function linkPrompt(prefill) {
   const isEdit = !!prefill;
   return new Promise((resolve) => {
@@ -766,190 +1050,20 @@ function linkPrompt(prefill) {
   });
 }
 
-// Keep bookmarkAddPrompt as alias for callers that use it
-const bookmarkAddPrompt = linkPrompt;
+/* ── RECENTLY VISITED ───────────────────────────────────────────
+   In-memory, seeded from __INITIAL_DATA__.                        */
+let _recentData = (window.__INITIAL_DATA__ && window.__INITIAL_DATA__.nt_recent)
+  ? window.__INITIAL_DATA__.nt_recent
+  : [];
 
-async function loadBookmarks() {
-  let data = await Store.get("nt_bookmarks");
-  if (!data) {
-    data = BM_DEFAULTS;
-    await Store.set("nt_bookmarks", data);
-  }
-  const list = document.getElementById("folder-list");
-
-  // Remember which folders are open before wiping
-  const openFolders = new Set();
-  list.querySelectorAll("details.folder").forEach((el, i) => {
-    if (el.open) openFolders.add(i);
-  });
-
-  list.innerHTML = "";
-
-  data.forEach((folder, fi) => {
-    const details = document.createElement("details");
-    details.className = "folder";
-    details.draggable = true;
-    details.dataset.dragIndex = fi;
-
-    const summary = document.createElement("summary");
-    summary.className = "folder-head";
-    const icon = document.createElement("span");
-    icon.className = "folder-icon";
-    icon.textContent = "◈";
-    summary.appendChild(icon);
-    summary.appendChild(document.createTextNode(" " + folder.folder));
-
-    // folder summary bar buttons (edit mode only)
-    const headBtns = document.createElement("span");
-    headBtns.className = "folder-head-btns";
-
-    const addLinkBtn = document.createElement("button");
-    addLinkBtn.className = "folder-head-btn";
-    addLinkBtn.innerHTML = '<i class="ph-light ph-plus"></i>';
-    addLinkBtn.title = "add link";
-    addLinkBtn.addEventListener("click", async (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      const r = await bookmarkAddPrompt();
-      if (!r || r === "delete") return;
-      const d = (await Store.get("nt_bookmarks")) || BM_DEFAULTS;
-      d[fi].links.push({ label: r.label, url: r.url, fav: r.fav });
-      await Store.set("nt_bookmarks", d);
-      loadBookmarks();
-    });
-
-    const editFolderBtn = document.createElement("button");
-    editFolderBtn.className = "folder-head-btn";
-    editFolderBtn.innerHTML = '<i class="ph-light ph-pencil-simple"></i>';
-    editFolderBtn.title = "edit folder";
-    editFolderBtn.addEventListener("click", async (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      const d = (await Store.get("nt_bookmarks")) || BM_DEFAULTS;
-      const r = await miniPrompt(
-        [{ key: "name", placeholder: "folder name" }],
-        { name: d[fi].folder },
-        { deletable: true },
-      );
-      if (!r) return;
-      if (r === "delete") {
-        d.splice(fi, 1);
-      } else if (r.name) {
-        d[fi].folder = r.name;
-      }
-      await Store.set("nt_bookmarks", d);
-      loadBookmarks();
-    });
-
-    headBtns.appendChild(editFolderBtn);
-    headBtns.appendChild(addLinkBtn);
-    summary.appendChild(headBtns);
-    details.appendChild(summary);
-
-    const linksDiv = document.createElement("div");
-    linksDiv.className = "folder-links grid";
-
-    folder.links.forEach((link, li) => {
-      const a = document.createElement("a");
-      a.href = link.url;
-      a.target = "_blank";
-      a.className = "fav-tile";
-      a.draggable = true;
-      a.dataset.dragIndex = li;
-
-      const img = document.createElement("img");
-      img.className = "fav";
-      img.src = link.fav || guessFavicon(link.url);
-      img.alt = "";
-      img.addEventListener("error", () => {
-        const letter = document.createElement("div");
-        letter.className = "fav-letter";
-        letter.textContent = (link.label || "?")[0];
-        img.replaceWith(letter);
-      });
-
-      const label = document.createElement("span");
-      label.textContent = link.label;
-
-      const edit = document.createElement("button");
-      edit.className = "tile-edit";
-      edit.innerHTML = '<i class="ph-light ph-pencil-simple"></i>';
-      edit.title = "edit";
-      edit.addEventListener("click", async (e) => {
-        e.preventDefault();
-        e.stopImmediatePropagation();
-        const d = (await Store.get("nt_bookmarks")) || BM_DEFAULTS;
-        const current = d[fi].links[li];
-        const r = await bookmarkAddPrompt({
-          label: current.label,
-          url: current.url,
-          fav: current.fav,
-        });
-        if (!r) return;
-        if (r === "delete") {
-          d[fi].links.splice(li, 1);
-        } else {
-          d[fi].links[li] = { label: r.label, url: r.url, fav: r.fav };
-        }
-        await Store.set("nt_bookmarks", d);
-        loadBookmarks();
-      });
-      edit.addEventListener("mousedown", (e) => e.stopImmediatePropagation());
-      edit.addEventListener("mouseup", (e) => e.stopImmediatePropagation());
-
-      a.appendChild(img);
-      a.appendChild(label);
-      a.appendChild(edit);
-      linksDiv.appendChild(a);
-    });
-
-    details.appendChild(linksDiv);
-    enableDragSort(
-      linksDiv,
-      "a[data-drag-index]",
-      async () => {
-        const d = (await Store.get("nt_bookmarks")) || BM_DEFAULTS;
-        return d[fi].links;
-      },
-      async (arr) => {
-        const d = (await Store.get("nt_bookmarks")) || BM_DEFAULTS;
-        d[fi].links = arr;
-        await Store.set("nt_bookmarks", d);
-      },
-      loadBookmarks,
-    );
-    if (openFolders.has(fi)) details.open = true;
-    list.appendChild(details);
-  });
+async function saveRecent() {
+  await Store.set("nt_recent", _recentData);
 }
 
-loadBookmarks();
-enableDragSort(
-  document.getElementById("folder-list"),
-  "details[data-drag-index]",
-  async () => (await Store.get("nt_bookmarks")) || BM_DEFAULTS,
-  async (arr) => Store.set("nt_bookmarks", arr),
-  loadBookmarks,
-);
-
-document
-  .getElementById("bm-add-folder-btn")
-  .addEventListener("click", async () => {
-    const r = await miniPrompt([{ key: "name", placeholder: "folder name" }]);
-    if (!r || !r.name) return;
-    const d = (await Store.get("nt_bookmarks")) || BM_DEFAULTS;
-    d.push({ folder: r.name, links: [] });
-    await Store.set("nt_bookmarks", d);
-    loadBookmarks();
-  });
-
-/* ── RECENTLY VISITED ───────────────────────────────────────────*/
-async function loadRecent() {
+function loadRecent() {
   const grid = document.getElementById("recent-grid");
-  const items = (await Store.get("nt_recent")) || [];
   grid.innerHTML = "";
-
-  items.forEach((item, i) => {
+  _recentData.forEach((item, i) => {
     const tile = document.createElement("div");
     tile.className = "recent-tile";
     const rtName = document.createElement("div");
@@ -961,15 +1075,13 @@ async function loadRecent() {
     tile.appendChild(rtName);
     tile.appendChild(rtUrl);
     tile.addEventListener("click", () => window.open(item.url, "_blank"));
-
     const x = document.createElement("button");
     x.className = "recent-x";
     x.innerHTML = '<i class="ph-light ph-x"></i>';
     x.addEventListener("click", async (e) => {
       e.stopPropagation();
-      const arr = (await Store.get("nt_recent")) || [];
-      arr.splice(i, 1);
-      await Store.set("nt_recent", arr);
+      _recentData.splice(i, 1);
+      await saveRecent();
       loadRecent();
     });
     tile.appendChild(x);
@@ -977,41 +1089,43 @@ async function loadRecent() {
   });
 }
 
-// Quick-add form — always visible, no edit mode needed
 async function quickAddRecent() {
   const name = document.getElementById("rqa-name").value.trim();
-  const url = document.getElementById("rqa-url").value.trim();
+  const url  = document.getElementById("rqa-url").value.trim();
   if (!name || !url) return;
-  const arr = (await Store.get("nt_recent")) || [];
-  arr.unshift({ name, url });
-  if (arr.length > 8) arr.pop();
-  await Store.set("nt_recent", arr);
+  _recentData.unshift({ name, url });
+  if (_recentData.length > 8) _recentData.pop();
+  await saveRecent();
   document.getElementById("rqa-name").value = "";
-  document.getElementById("rqa-url").value = "";
+  document.getElementById("rqa-url").value  = "";
   loadRecent();
 }
 
-document.getElementById("rqa-btn").addEventListener("click", quickAddRecent);
-document.getElementById("rqa-url").addEventListener("keydown", (e) => {
+document.getElementById("rqa-btn")?.addEventListener("click", quickAddRecent);
+document.getElementById("rqa-url")?.addEventListener("keydown", (e) => {
   if (e.key === "Enter") quickAddRecent();
 });
 
+// Wire delete handlers on ssr-rendered recent tiles.
 loadRecent();
 
 /* ── QUICK ACCESS ───────────────────────────────────────────────
-   Default links seeded on first load, then editable via storage  */
+   In-memory, seeded from __INITIAL_DATA__.                        */
 /* QA_DEFAULTS is defined in data/defaults.js */
 
-async function loadQuickAccess() {
-  let items = await Store.get("nt_quick");
-  if (!items) {
-    items = QA_DEFAULTS;
-    await Store.set("nt_quick", items);
-  }
-  const container = document.querySelector(".quick-links");
-  container.innerHTML = "";
+let _qaData = (window.__INITIAL_DATA__ && window.__INITIAL_DATA__.nt_quick)
+  ? window.__INITIAL_DATA__.nt_quick
+  : QA_DEFAULTS;
 
-  items.forEach((item, i) => {
+async function saveQa() {
+  await Store.set("nt_quick", _qaData);
+}
+
+function loadQuickAccess() {
+  const container = document.querySelector(".quick-links");
+  if (!container) return;
+  container.innerHTML = "";
+  _qaData.forEach((item, i) => {
     const a = document.createElement("a");
     a.href = item.url;
     a.target = "_blank";
@@ -1023,12 +1137,9 @@ async function loadQuickAccess() {
     favImg.alt = "";
     a.appendChild(favImg);
     a.appendChild(document.createTextNode(" " + item.label));
-
     const btnGroup = document.createElement("span");
-    btnGroup.style.cssText =
-      "margin-left:auto;display:none;align-items:center;gap:0;flex-shrink:0;";
+    btnGroup.style.cssText = "margin-left:auto;display:none;align-items:center;gap:0;flex-shrink:0;";
     btnGroup.className = "qa-btn-group";
-
     const edit = document.createElement("button");
     edit.className = "qa-edit";
     edit.innerHTML = '<i class="ph-light ph-pencil-simple"></i>';
@@ -1036,63 +1147,88 @@ async function loadQuickAccess() {
     edit.addEventListener("click", async (e) => {
       e.preventDefault();
       e.stopPropagation();
-      const arr = (await Store.get("nt_quick")) || QA_DEFAULTS;
-      const current = arr[i];
-      const r = await linkPrompt({
-        label: current.label,
-        url: current.url,
-        fav: current.favicon,
-      });
+      const current = _qaData[i];
+      const r = await linkPrompt({ label: current.label, url: current.url, fav: current.favicon || current.fav });
       if (!r) return;
       if (r === "delete") {
-        arr.splice(i, 1);
+        _qaData.splice(i, 1);
       } else if (r.label && r.url) {
-        arr[i] = { label: r.label, url: r.url, favicon: r.fav || "" };
+        _qaData[i] = { label: r.label, url: r.url, favicon: r.fav || "" };
       }
-      await Store.set("nt_quick", arr);
+      await saveQa();
       loadQuickAccess();
     });
-
     btnGroup.appendChild(edit);
     a.appendChild(btnGroup);
     container.appendChild(a);
   });
 }
 
-loadQuickAccess();
-enableDragSort(
-  document.querySelector(".quick-links"),
-  "a[data-drag-index]",
-  async () => (await Store.get("nt_quick")) || QA_DEFAULTS,
-  async (arr) => Store.set("nt_quick", arr),
-  loadQuickAccess,
-);
+const quickContainer = document.querySelector(".quick-links");
+if (quickContainer) {
+  enableDragSort(
+    quickContainer,
+    "a[data-drag-index]",
+    () => _qaData,
+    (arr) => { _qaData = arr; saveQa(); },
+    loadQuickAccess,
+  );
+}
 
-document.getElementById("qa-add-btn").addEventListener("click", async () => {
+document.getElementById("qa-add-btn")?.addEventListener("click", async () => {
   const r = await linkPrompt();
   if (!r || !r.label || !r.url) return;
-  const arr = (await Store.get("nt_quick")) || QA_DEFAULTS;
-  arr.push({ label: r.label, url: r.url, favicon: r.fav || "" });
-  await Store.set("nt_quick", arr);
+  _qaData.push({ label: r.label, url: r.url, favicon: r.fav || "" });
+  await saveQa();
   loadQuickAccess();
 });
+
+// Wire edit handlers — SSR gave us the links, js makes them interactive.
+loadQuickAccess();
 
 /* ── QUOTES ─────────────────────────────────────────────────── */
 /* QUOTES array is defined in data/quotes.js */
 
-const q = QUOTES[Math.floor(Math.random() * QUOTES.length)];
-document.getElementById("quote-text").textContent = q.text;
-document.getElementById("quote-author").textContent = q.author;
+// Get the current quote text and author from the DOM
+const quoteTextEl = document.getElementById("quote-text");
+const quoteAuthorEl = document.getElementById("quote-author");
 
-let quoteIndex = QUOTES.indexOf(q);
-document.getElementById("quote-next").addEventListener("click", () => {
+let quoteIndex = 0;
+
+// If the DOM already has a quote, find its index in QUOTES
+if (quoteTextEl && quoteAuthorEl) {
+  const currentText = quoteTextEl.textContent.trim();
+  const currentAuthor = quoteAuthorEl.textContent.trim();
+  const foundIndex = QUOTES.findIndex(
+    (q) => q.text === currentText && q.author === currentAuthor,
+  );
+  if (foundIndex !== -1) {
+    quoteIndex = foundIndex;
+  } else {
+    // If not found (e.g., custom quote), set to a random index
+    quoteIndex = Math.floor(Math.random() * QUOTES.length);
+    // Update the DOM with a random quote from QUOTES
+    const q = QUOTES[quoteIndex];
+    quoteTextEl.textContent = q.text;
+    quoteAuthorEl.textContent = q.author;
+  }
+} else {
+  // Fallback: set first quote
+  quoteIndex = 0;
+  const q = QUOTES[0];
+  if (quoteTextEl) quoteTextEl.textContent = q.text;
+  if (quoteAuthorEl) quoteAuthorEl.textContent = q.author;
+}
+
+document.getElementById("quote-next")?.addEventListener("click", () => {
   let idx;
   do {
     idx = Math.floor(Math.random() * QUOTES.length);
-  } while (idx === quoteIndex);
+  } while (idx === quoteIndex && QUOTES.length > 1);
   quoteIndex = idx;
-  document.getElementById("quote-text").textContent = QUOTES[idx].text;
-  document.getElementById("quote-author").textContent = QUOTES[idx].author;
+  const q = QUOTES[idx];
+  if (quoteTextEl) quoteTextEl.textContent = q.text;
+  if (quoteAuthorEl) quoteAuthorEl.textContent = q.author;
 });
 
 /* ── KANJI WORD OF THE DAY ──────────────────────────────────── */
@@ -1100,49 +1236,111 @@ document.getElementById("quote-next").addEventListener("click", () => {
 
 function renderWord(w) {
   const el = document.getElementById("kanji-char");
-  el.innerHTML = "";
-  const a = document.createElement("a");
-  a.href =
-    "https://jisho.org/search/" + encodeURIComponent(w.k) + "%20%23kanji";
-  a.target = "_blank";
-  a.style.cssText = "color:inherit;text-decoration:none;";
-  a.textContent = w.k;
-  el.appendChild(a);
-  document.getElementById("kanji-reading").textContent = w.r;
-  document.getElementById("kanji-meaning").textContent = w.m;
+  if (el) {
+    el.innerHTML = "";
+    const a = document.createElement("a");
+    a.href =
+      "https://jisho.org/search/" + encodeURIComponent(w.k) + "%20%23kanji";
+    a.target = "_blank";
+    a.style.cssText = "color:inherit;text-decoration:none;";
+    a.textContent = w.k;
+    el.appendChild(a);
+  }
+  const readingEl = document.getElementById("kanji-reading");
+  if (readingEl) readingEl.textContent = w.r;
+  const meaningEl = document.getElementById("kanji-meaning");
+  if (meaningEl) meaningEl.textContent = w.m;
   const lvlEl = document.getElementById("kanji-level");
-  lvlEl.textContent = w.l.toUpperCase();
-  lvlEl.className = "kanji-level " + w.l;
+  if (lvlEl) {
+    lvlEl.textContent = w.l.toUpperCase();
+    lvlEl.className = "kanji-level " + w.l;
+  }
 }
 
-// Pick a random word from a pool, avoiding immediate repeat
-let wordIndex = 0; // declared first so randomWordFrom can reference it
+// Get current word from DOM
+let wordIndex = 0;
+const charEl = document.getElementById("kanji-char");
+if (charEl) {
+  const currentChar = charEl.textContent.trim();
+  // Find index in WORDS
+  const foundIndex = WORDS.findIndex((w) => w.k === currentChar);
+  if (foundIndex !== -1) {
+    wordIndex = foundIndex;
+  } else {
+    // Not found, set random
+    wordIndex = Math.floor(Math.random() * WORDS.length);
+    renderWord(WORDS[wordIndex]);
+  }
+} else {
+  wordIndex = 0;
+  renderWord(WORDS[0]);
+}
 
-function randomWordFrom(pool) {
-  if (pool.length === 1) return 0;
+document.getElementById("kanji-next")?.addEventListener("click", () => {
   let idx;
   do {
-    idx = Math.floor(Math.random() * pool.length);
-  } while (idx === wordIndex);
-  return idx;
-}
-
-wordIndex = randomWordFrom(WORDS);
-renderWord(WORDS[wordIndex]);
-
-document.getElementById("kanji-next").addEventListener("click", () => {
-  wordIndex = randomWordFrom(WORDS);
+    idx = Math.floor(Math.random() * WORDS.length);
+  } while (idx === wordIndex && WORDS.length > 1);
+  wordIndex = idx;
   renderWord(WORDS[wordIndex]);
 });
 
-/* ── THEME ───────────────────────────────────────────────────── */
+/* ── WIDGET IMAGE ────────────────────────────────────────────── */
 (function () {
-  const t = localStorage.getItem("nt_theme") || "dark";
-  document.body.className = document.body.className
-    .replace(/\btheme-\S+/g, "")
-    .trim();
-  document.body.classList.add("theme-" + t);
+  const btn  = document.getElementById("widget-img-next");
+  const wrap = document.getElementById("widget-img-wrap");
+  if (!btn || !wrap) return;
+
+  let currentFilename = wrap.querySelector("img")?.dataset.filename || "";
+  let preloaded = null;
+
+  function setImage(url, filename) {
+    const img = document.createElement("img");
+    img.src = url;
+    img.id = "widget-img";
+    img.className = "active";
+    img.dataset.filename = filename;
+    wrap.innerHTML = "";
+    wrap.appendChild(img);
+    currentFilename = filename;
+  }
+
+  function preloadNext(afterFilename) {
+    fetch(`/api/widget-images/next?current=${encodeURIComponent(afterFilename)}`)
+      .then((r) => r.json())
+      .then((d) => {
+        if (!d.url) return;
+        const img = new Image();
+        img.src = d.url; // browser fetches silently
+        preloaded = { url: d.url, filename: d.filename };
+      })
+      .catch(() => {});
+  }
+
+  btn.addEventListener("click", () => {
+    if (!preloaded) {
+      // preload not ready yet (e.g. clicked faster than the bg fetch completed)
+      fetch(`/api/widget-images/next?current=${encodeURIComponent(currentFilename)}`)
+        .then((r) => r.json())
+        .then((d) => {
+          if (!d.url) return;
+          setImage(d.url, d.filename);
+          preloadNext(d.filename);
+        })
+        .catch(() => {});
+      return;
+    }
+    setImage(preloaded.url, preloaded.filename);
+    preloaded = null;
+    preloadNext(currentFilename);
+  });
+
+  // Start preloading immediately on page load so first click is instant.
+  if (currentFilename) preloadNext(currentFilename);
 })();
+/* Theme class is set server-side on <body> via the template.
+   settings.js still uses localStorage for instant preview, but
+   the canonical value lives in the db and is applied by Go.       */
 
 /* ── FOCUS SEARCH ON KEYPRESS ───────────────────────────────── */
 document.addEventListener("keydown", (e) => {
@@ -1153,6 +1351,17 @@ document.addEventListener("keydown", (e) => {
     el.focus();
   }
 });
+
+// Focus search on load. Firefox retains url bar focus on new tab opens
+// even after window.load fires, so we delay slightly to override it.
+window.addEventListener("load", () => {
+  const el = document.getElementById("search-input");
+  if (!el) return;
+  // immediate attempt
+  el.focus();
+  // delayed fallback to beat firefox's new tab focus management
+  setTimeout(() => el.focus(), 100);
+});
 /* ── PROFILE TAGLINE ─────────────────────────────────────────── */
 (function () {
   const el = document.getElementById("profile-tagline");
@@ -1160,358 +1369,179 @@ document.addEventListener("keydown", (e) => {
     el.textContent = TAGLINES[Math.floor(Math.random() * TAGLINES.length)];
 })();
 
-/* ── SETTINGS WIRING ─────────────────────────────────────────── */
-/* Reads all nt_* keys from storage on load and applies them.     */
-(async function applySettings() {
-  /* ── BATCH STORAGE READ — single call instead of many ── */
-  const all = await Store.getAll();
-  const _get = (key) => (all[key] !== undefined ? all[key] : null);
+/* ── WEATHER FETCH ────────────────────────────────────────────── */
+/* Location was SSR'd for the status widget text; we still need to
+   fetch live temperature on the client since it changes constantly. */
+(function () {
+  const loc = window.__INITIAL_DATA__ && window.__INITIAL_DATA__.nt_location;
+  if (!loc || !loc.lat || !loc.lon) return;
+  const el = document.getElementById("temperature");
+  if (!el) return;
+  fetch(`/api/weather?lat=${loc.lat}&lon=${loc.lon}`)
+    .then((r) => r.json())
+    .then((d) => { el.textContent = `${d.current_weather.temperature}°C`; })
+    .catch(() => { el.textContent = "n/a"; });
+})();
 
-  /* ── THEME GUARD ── */
-  const storedTheme = localStorage.getItem("nt_theme") || "dark";
-  document.body.className = document.body.className
-    .replace(/\btheme-\S+/g, "")
-    .trim();
-  document.body.classList.add("theme-" + storedTheme);
+/* ── SEARCH ENGINE WIRING ────────────────────────────────────── */
+/* Engines are SSR'd as buttons; we wire click + Enter here.      */
+(function () {
+  const d = window.__INITIAL_DATA__ || {};
+  const searchTarget = d.nt_search_target || "_blank";
 
-  /* ── helpers ── */
-  function fetchTemp(lat, lon) {
-    const el = document.getElementById("temperature");
-    fetch(`/api/weather?lat=${lat}&lon=${lon}`)
-      .then((r) => r.json())
-      .then((d) => {
-        el.textContent = `${d.current_weather.temperature}°C`;
-      })
-      .catch(() => {
-        el.textContent = "n/a";
+  // engines may already be rendered by server; just wire them
+  const bar = document.querySelector(".engine-bar") || document.querySelector(".search-engines");
+  if (bar) {
+    bar.querySelectorAll(".engine-btn").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        bar.querySelectorAll(".engine-btn").forEach((b) => b.classList.remove("active"));
+        btn.classList.add("active");
+        activeEngine = btn;
       });
+    });
+    activeEngine = bar.querySelector(".engine-btn.active") || bar.querySelector(".engine-btn");
   }
 
-  /* ── 1. BACKGROUND IMAGE ── */
-  const bgImages = _get("nt_bg_images");
-  if (bgImages && bgImages.length > 0) {
-    const pick = bgImages[Math.floor(Math.random() * bgImages.length)];
-    const bgEl = document.getElementById("bg");
-    if (bgEl) {
-      const bgBlur = _get("nt_bg_blur");
-      const img = document.createElement("img");
-      img.src = pick.url || "";
-      img.alt = "";
-      bgEl.innerHTML = "";
-      bgEl.appendChild(img);
-      bgEl.classList.toggle("blurred", bgBlur !== false);
-    }
-  }
-
-  /* ── 2. PROFILE IMAGES ── */
-  const profImages = _get("nt_profile_images");
-  if (profImages && profImages.length > 0) {
-    const activeIdx = Math.floor(Math.random() * profImages.length);
-
-    // Header avatar (profile picture in header)
-    const avatarEl = document.getElementById("header-avatar");
-    if (avatarEl) {
-      avatarEl.innerHTML = "";
-      const img = document.createElement("img");
-      img.src = profImages[activeIdx].url || "";
-      img.alt = "";
-      img.style.cssText = "width:100%;height:100%;object-fit:cover;";
-      avatarEl.appendChild(img);
-    }
-  }
-
-  /* ── 2b. WIDGET IMAGES ── */
-  const widgetImages = _get("nt_widget_images");
-  if (widgetImages && widgetImages.length > 0) {
-    const activeIdx = Math.floor(Math.random() * widgetImages.length);
-
-    const wrap = document.getElementById("widget-img-wrap");
-    if (wrap) {
-      wrap.innerHTML = "";
-      widgetImages.forEach((img, i) => {
-        const el = document.createElement("img");
-        el.src = img.url || "";
-        el.alt = "";
-        el.style.cssText =
-          "width:100%;height:100%;object-fit:cover;display:none;";
-        if (i === activeIdx) el.style.display = "block";
-        wrap.appendChild(el);
-      });
-    }
-  }
-
-  /* ── 3. LANGUAGE + USERNAME ── */
-  const uiLang = _get("nt_ui_lang") || "en";
-  const titleLang = _get("nt_title_lang") || "ja";
-  const username = _get("nt_username");
-
-  // Store uiLang globally so tick() can use it for greetings
-  window._uiLang = uiLang;
-
-  // Username with lang-aware fallback
-  const usernameEl = document.getElementById("username");
-  if (usernameEl) {
-    usernameEl.textContent = username || t(titleLang).username_fallback;
-  }
-
-  // Widget titles
-  // Widget titles — from i18n.js tw()
-  const titles = tw(titleLang);
-  document.querySelectorAll(".wt-label[data-widget-label]").forEach((label) => {
-    const key = label.dataset.widgetLabel;
-    if (titles[key]) label.textContent = titles[key];
-  });
-
-  // UI strings — from i18n.js t()
-  const ui = t(uiLang);
-  const searchEl = document.getElementById("search-input");
-  if (searchEl) searchEl.placeholder = ui.search_placeholder;
-  const notesEl = document.getElementById("notes-area");
-  if (notesEl) notesEl.placeholder = ui.notes_placeholder;
-
-  // Refresh greeting immediately with correct lang
-  const nowH = new Date().getHours();
-  greetingSet = getGreetingStrings(nowH, window._uiLang);
-  const greetEl = document.getElementById("greeting");
-  if (greetEl)
-    setGreeting(
-      greetEl,
-      greetingSet[Math.floor(Math.random() * greetingSet.length)],
-    );
-
-  /* ── 4. LOCATION / TEMPERATURE ── */
-  const location = _get("nt_location");
-  if (location && location.lat && location.lon) {
-    fetchTemp(location.lat, location.lon);
-  } else if (navigator.geolocation) {
-    navigator.geolocation.getCurrentPosition(
-      (pos) => fetchTemp(pos.coords.latitude, pos.coords.longitude),
-      () => {
-        const el = document.getElementById("temperature");
-        if (el) el.textContent = "n/a";
-      },
-    );
-  } else {
-    const el = document.getElementById("temperature");
-    if (el) el.textContent = "n/a";
-  }
-
-  /* ── 5. FONTS ── */
-  const FONT_MAP_LATIN = {
-    inter: "'Inter', sans-serif",
-    "share-tech-mono": "'Share Tech Mono', monospace",
-    vt323: "'VT323', monospace",
-    "courier-prime": "'Courier Prime', monospace",
-  };
-  const FONT_MAP_JP = {
-    dotgothic16: "'DotGothic16', monospace",
-    "biz-udgothic": "'BIZ UDGothic', sans-serif",
-    "noto-sans-jp": "'Noto Sans JP', sans-serif",
-  };
-  const FONT_MAP_CLOCK = {
-    medodica: "'Medodica', monospace",
-    orbitron: "'Orbitron', monospace",
-    oxanium: "'Oxanium', monospace",
-  };
-
-  const fontLatin = _get("nt_font_latin");
-  const fontJp = _get("nt_font_jp");
-  const fontClock = _get("nt_font_clock");
-
-  if (fontLatin && FONT_MAP_LATIN[fontLatin]) {
-    document.body.style.setProperty(
-      "--font-pixel",
-      `${FONT_MAP_LATIN[fontLatin]}, ${FONT_MAP_JP[fontJp] || "'DotGothic16', monospace"}`,
-    );
-  } else if (fontJp && FONT_MAP_JP[fontJp]) {
-    document.body.style.setProperty(
-      "--font-pixel",
-      `'DotGothic16', ${FONT_MAP_JP[fontJp]}`,
-    );
-  }
-  if (fontClock && FONT_MAP_CLOCK[fontClock]) {
-    document.body.style.setProperty("--font-doto", FONT_MAP_CLOCK[fontClock]);
-    // Apply per-font size class to body so both #clock and .timer-input/.timer-sep scale correctly
-    document.body.classList.remove(
-      "font-medodica",
-      "font-orbitron",
-      "font-oxanium",
-    );
-    document.body.classList.add(`font-${fontClock}`);
-  }
-
-  /* ── 6. CLOCK FORMAT & SECONDS ── */
-  const clockFormat = _get("nt_clock_format"); // '24h' | '12h'
-  const clockSeconds = _get("nt_clock_seconds"); // true | false
-  const clockTheme = _get("nt_clock_theme"); // 'theme' | 'light' | 'dark'
-
-  // Clear the original tick interval, replace with settings-aware one
-  clearInterval(window._tickInterval);
-  window._clockFormat = clockFormat || "24h";
-  window._clockSeconds = clockSeconds !== false;
-
-  // Re-wire tick to respect settings
-  function tickWithSettings() {
-    const now = new Date();
-    const rawH = now.getHours();
-    const m = now.getMinutes();
-    const s = now.getSeconds();
-
-    if (binaryClock) {
-      // Binary always 24h; pass null for s when hiding seconds
-      renderBinary(rawH, m, window._clockSeconds ? s : null);
-    } else {
-      let h = rawH;
-      let suffix = "";
-      if (window._clockFormat === "12h") {
-        suffix = h >= 12 ? " PM" : " AM";
-        h = h % 12 || 12;
-      }
-      document.getElementById("clock").textContent = window._clockSeconds
-        ? `${pad(h)}:${pad(m)}:${pad(s)}${suffix}`
-        : `${pad(h)}:${pad(m)}${suffix}`;
-    }
-
-    if (rawH !== lastHour) {
-      lastHour = rawH;
-      greetingSet = getGreetingStrings(rawH, window._uiLang || "en");
-      setGreeting(
-        document.getElementById("greeting"),
-        greetingSet[Math.floor(Math.random() * greetingSet.length)],
-      );
-      document.getElementById("date").textContent =
-        `${DAYS[now.getDay()].toUpperCase()} · ${MONTHS[now.getMonth()].toUpperCase()} ${now.getDate()} · ${now.getFullYear()}`;
-      document.getElementById("day-name").textContent = DAYS[now.getDay()];
-      document.getElementById("week-num").textContent =
-        `W${pad(getWeekNum(now))}`;
-      document.getElementById("year-progress").textContent =
-        getYearProgress(now);
-    }
-  }
-  window._tickInterval = setInterval(tickWithSettings, 1000);
-  tickWithSettings();
-
-  const clockEl = document.getElementById("clock");
-  if (clockEl) {
-    clockEl.classList.remove("force-light", "force-dark");
-    if (clockTheme === "light") clockEl.classList.add("force-light");
-    else if (clockTheme === "dark") clockEl.classList.add("force-dark");
-    // 'theme' — no class, color follows --white which tracks the page theme
-  }
-
-  /* ── 7. SEARCH ENGINES + TARGET ── */
-  const engines = _get("nt_engines");
-  const searchTarget = _get("nt_search_target") || "_blank";
-
-  if (engines && engines.length > 0) {
-    const bar =
-      document.querySelector(".engine-bar") ||
-      document.querySelector(".search-engines");
-    if (bar) {
-      bar.innerHTML = "";
-      engines.forEach((eng) => {
-        const btn = document.createElement("button");
-        btn.className = "engine-btn" + (eng.isDefault ? " active" : "");
-        btn.dataset.url = eng.url;
-        btn.textContent = eng.name;
-        btn.addEventListener("click", () => {
-          document
-            .querySelectorAll(".engine-btn")
-            .forEach((b) => b.classList.remove("active"));
-          btn.classList.add("active");
-          activeEngine = btn;
-        });
-        bar.appendChild(btn);
-      });
-      // reset activeEngine to the new default
-      activeEngine =
-        bar.querySelector(".engine-btn.active") ||
-        bar.querySelector(".engine-btn");
-    }
-  }
-
-  // Patch search to respect target
   const searchInput = document.getElementById("search-input");
   if (searchInput) {
-    // Remove old listener by cloning; re-add with correct target
     const newInput = searchInput.cloneNode(true);
     searchInput.parentNode.replaceChild(newInput, searchInput);
     newInput.addEventListener("keydown", (e) => {
       if (e.key === "Enter") {
         const q = e.target.value.trim();
         if (!q) return;
-        const url =
-          (activeEngine?.dataset?.url || "https://duckduckgo.com/?q=") +
-          encodeURIComponent(q);
+        const url = (activeEngine?.dataset?.url || "https://duckduckgo.com/?q=") + encodeURIComponent(q);
         window.open(url, searchTarget);
         e.target.value = "";
       }
     });
   }
+})();
 
-  /* ── 8. JLPT FILTER on word widget ── */
-  const jlptLevel = _get("nt_jlpt_level") || "all";
-  if (jlptLevel !== "all") {
-    const filtered = WORDS.filter((w) => w.l === jlptLevel);
-    if (filtered.length > 0) {
-      wordIndex = Math.floor(Math.random() * filtered.length);
-      renderWord(filtered[wordIndex]);
-      const nextBtn = document.getElementById("kanji-next");
-      if (nextBtn) {
-        const newBtn = nextBtn.cloneNode(true);
-        nextBtn.parentNode.replaceChild(newBtn, nextBtn);
-        newBtn.addEventListener("click", () => {
-          let idx;
-          do {
-            idx = Math.floor(Math.random() * filtered.length);
-          } while (idx === wordIndex && filtered.length > 1);
-          wordIndex = idx;
-          renderWord(filtered[wordIndex]);
-        });
-      }
+
+/* ── SYSTEM STATS WIDGET ──────────────────────────────────────── */
+(function () {
+  const canvas = document.getElementById("stats-canvas");
+  if (!canvas) return;
+  const ctx = canvas.getContext("2d");
+
+  const history = { cpu: [], mem: [] };
+  const MAX = 30;
+
+  // Keep canvas pixel dimensions in sync with its CSS size.
+  // This fixes stretching when the widget is in a wide column.
+  function syncSize() {
+    const rect = canvas.getBoundingClientRect();
+    const w = Math.round(rect.width);
+    const h = Math.round(rect.height);
+    if (canvas.width !== w || canvas.height !== h) {
+      canvas.width  = w;
+      canvas.height = h;
+    }
+  }
+  const ro = new ResizeObserver(syncSize);
+  ro.observe(canvas);
+  syncSize();
+
+  async function fetchStats() {
+    try {
+      const r = await fetch("/api/stats");
+      if (!r.ok) return null;
+      return r.json();
+    } catch {
+      return null;
     }
   }
 
-  /* ── 9. CUSTOM QUOTES ── */
-  const customQuotes = _get("nt_custom_quotes");
-  if (customQuotes && customQuotes.length > 0) {
-    const q = customQuotes[Math.floor(Math.random() * customQuotes.length)];
-    const textEl = document.getElementById("quote-text");
-    const authorEl = document.getElementById("quote-author");
-    if (textEl) textEl.textContent = q.text;
-    if (authorEl) authorEl.textContent = q.author;
+  function pushHistory(arr, val) {
+    arr.push(val);
+    if (arr.length > MAX) arr.shift();
   }
 
-  /* ── 10. WIDGET LAYOUT (col, order, visibility) ── */
-  const layout = _get("nt_widget_layout");
-  if (layout && layout.length > 0) {
-    const cols = {
-      left: document.getElementById("col-left"),
-      center: document.getElementById("col-center"),
-      right: document.getElementById("col-right"),
-    };
+  function drawGraph(data, color, yOffset, height) {
+    if (!data.length) return;
+    const w = canvas.width;
+    const step = w / (MAX - 1);
 
-    // Group by column, sorted by order
-    const byCol = { left: [], center: [], right: [] };
-    layout.forEach((w) => {
-      const el = document.querySelector(`[data-widget="${w.id}"]`);
-      if (!el) return;
-      if (w.visible === false) {
-        el.style.display = "none";
-        return;
-      }
-      el.style.display = "";
-      const col = byCol[w.col] || byCol.left;
-      col.push({ order: w.order, el });
-    });
+    ctx.beginPath();
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 1.5;
 
-    // Append widgets to their column in order
-    ["left", "center", "right"].forEach((colKey) => {
-      const colEl = cols[colKey];
-      if (!colEl) return;
-      byCol[colKey]
-        .sort((a, b) => a.order - b.order)
-        .forEach(({ el }) => colEl.appendChild(el));
+    data.forEach((val, i) => {
+      const x = i * step;
+      const y = yOffset + height - (val / 100) * height;
+      if (i === 0) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
     });
+    ctx.stroke();
+
+    ctx.lineTo((data.length - 1) * step, yOffset + height);
+    ctx.lineTo(0, yOffset + height);
+    ctx.closePath();
+    ctx.fillStyle = color.replace(")", ", 0.08)").replace("rgb", "rgba");
+    ctx.fill();
   }
+
+  function render(stats) {
+    const w = canvas.width;
+    const h = canvas.height;
+    if (!w || !h) return;
+    const style = getComputedStyle(document.documentElement);
+    const dim    = style.getPropertyValue("--dimmer").trim();
+    const border = style.getPropertyValue("--border").trim();
+    const white  = style.getPropertyValue("--white").trim();
+
+    ctx.clearRect(0, 0, w, h);
+
+    // Grid lines
+    ctx.strokeStyle = border;
+    ctx.lineWidth = 0.5;
+    for (let i = 0; i <= 4; i++) {
+      const y  = Math.round((h / 2) * (i / 4));
+      const y2 = Math.round(h / 2 + (h / 2) * (i / 4));
+      ctx.beginPath(); ctx.moveTo(0, y);  ctx.lineTo(w, y);  ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(0, y2); ctx.lineTo(w, y2); ctx.stroke();
+    }
+
+    // CPU graph (top half)
+    drawGraph(history.cpu, `rgb(138, 180, 248)`, 0, h / 2 - 4);
+    // MEM graph (bottom half)
+    drawGraph(history.mem, `rgb(144, 216, 112)`, h / 2 + 4, h / 2 - 4);
+
+    // Labels
+    ctx.font = `9px var(--font-pixel, monospace)`;
+    ctx.fillStyle = dim;
+    ctx.fillText("CPU", 4, 12);
+    ctx.fillText("MEM", 4, h / 2 + 16);
+
+    if (stats) {
+      ctx.fillStyle = white;
+      ctx.fillText(`${Math.round(stats.cpu || 0)}%`, w - 28, 12);
+      ctx.fillText(`${Math.round(stats.ram || 0)}%`, w - 28, h / 2 + 16);
+    }
+
+    // Divider
+    ctx.strokeStyle = border;
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(0, h / 2);
+    ctx.lineTo(w, h / 2);
+    ctx.stroke();
+  }
+
+  async function update() {
+    syncSize();
+    const stats = await fetchStats();
+    if (stats) {
+      pushHistory(history.cpu, stats.cpu || 0);
+      pushHistory(history.mem, stats.ram || 0);
+    } else {
+      pushHistory(history.cpu, 0);
+      pushHistory(history.mem, 0);
+    }
+    render(stats);
+  }
+
+  update();
+  setInterval(update, 2000);
 })();

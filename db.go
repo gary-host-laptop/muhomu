@@ -209,9 +209,12 @@ func getBookmarks() ([]BookmarkFolder, error) {
 			folderMap[folder] = &BookmarkFolder{Folder: folder, Links: []BookmarkLink{}}
 			folderOrder = append(folderOrder, folder)
 		}
-		folderMap[folder].Links = append(folderMap[folder].Links, BookmarkLink{
-			ID: id, Label: label, URL: url, Fav: favicon,
-		})
+		// pos == -1 is a sentinel row for an empty folder — skip adding a link
+		if pos >= 0 && label != "" {
+			folderMap[folder].Links = append(folderMap[folder].Links, BookmarkLink{
+				ID: id, Label: label, URL: url, Fav: favicon,
+			})
+		}
 	}
 
 	result := make([]BookmarkFolder, 0, len(folderOrder))
@@ -242,6 +245,14 @@ func setBookmarks(folders []BookmarkFolder) error {
 	defer stmt.Close()
 
 	for fi, folder := range folders {
+		if len(folder.Links) == 0 {
+			// Insert a placeholder row so the empty folder persists.
+			// label="" url="" sentinel is filtered out on read.
+			if _, err := stmt.Exec(folder.Folder, "", "", "", fi, -1); err != nil {
+				return err
+			}
+			continue
+		}
 		for li, link := range folder.Links {
 			if _, err := stmt.Exec(folder.Folder, link.Label, link.URL, link.Fav, fi, li); err != nil {
 				return err

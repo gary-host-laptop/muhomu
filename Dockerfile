@@ -5,8 +5,8 @@ WORKDIR /build
 COPY go.mod go.sum ./
 RUN go mod download
 
-COPY *.go ./
-RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w" -o mutabu .
+COPY . .
+RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w" -o muhomu .
 
 # ── Final image ──────────────────────────────────────────────────────────────
 FROM alpine:latest
@@ -15,8 +15,9 @@ RUN apk --no-cache add ca-certificates tzdata
 
 WORKDIR /app
 
-COPY --from=builder /build/mutabu .
+COPY --from=builder /build/muhomu .
 COPY static/ ./static/
+COPY templates/ ./templates/
 
 RUN mkdir -p /data/images
 
@@ -26,4 +27,4 @@ ENV PORT=4444
 ENV DATA_DIR=/data
 ENV STATIC_DIR=/app/static
 
-CMD ["./mutabu", "-port", "4444", "-data", "/data", "-static", "/app/static"]
+CMD ["./muhomu", "-port", "4444", "-data", "/data", "-static", "/app/static"]

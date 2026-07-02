@@ -201,33 +201,42 @@ body.font-oxanium #clock {
 
 /* Timer display: fill 60px fixed container */
 body.font-medodica .timer-display {
+    font-family: "Medodica", monospace;
     font-size: 55px;
 }
 body.font-orbitron .timer-display {
+    font-family: "Orbitron", monospace;
     font-size: 42px;
 }
 body.font-oxanium .timer-display {
+    font-family: "Oxanium", monospace;
     font-size: 41px;
 }
 
 /* Timer inputs: height fixed at 28px, font-size is visual only */
 body.font-medodica .timer-input {
+    font-family: "Medodica", monospace;
     font-size: 22px;
 }
 body.font-orbitron .timer-input {
+    font-family: "Orbitron", monospace;
     font-size: 15px;
 }
 body.font-oxanium .timer-input {
+    font-family: "Oxanium", monospace;
     font-size: 15px;
 }
 
 body.font-medodica .timer-sep {
+    font-family: "Medodica", monospace;
     font-size: 24px;
 }
 body.font-orbitron .timer-sep {
+    font-family: "Orbitron", monospace;
     font-size: 16px;
 }
 body.font-oxanium .timer-sep {
+    font-family: "Oxanium", monospace;
     font-size: 16px;
 }
 
@@ -655,18 +664,19 @@ body.edit-mode .wt-btn {
 
 .widget-img-wrap {
     width: 100%;
-    max-height: 200px;
-    overflow: hidden;
+    overflow: hidden; /* optional, to clip if you want */
     display: flex;
     align-items: center;
     justify-content: center;
+    background: var(--panel2);
+    border: 1px solid var(--border);
 }
 
 .widget-img-wrap img {
     display: none;
     width: 100%;
-    height: auto;
-    object-fit: cover;
+    height: auto; /* maintain aspect ratio */
+    /* no max-height, no object-fit – the image itself defines the container height */
 }
 
 .widget-img-wrap img.active {
@@ -1593,4 +1603,11 @@ body.edit-mode .fav-tile.drag-over {
 }
 .footer-dot.dot-3 {
     animation: dot3 2.5s steps(1) infinite;
+}
+
+/* ─── SYSTEM STATS WIDGET ───────────────────────────── */
+#stats-canvas {
+    display: block;
+    width: 100%;
+    height: 150px;
 }

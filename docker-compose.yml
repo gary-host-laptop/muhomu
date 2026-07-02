@@ -5,6 +5,7 @@ services:
       - "4444:4444"
     volumes:
       - mutabu-data:/data
+      - ./widget-images:/data/widget-images:z
     restart: unless-stopped
     environment:
       - PORT=4444

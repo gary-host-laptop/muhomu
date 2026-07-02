@@ -1,4 +1,4 @@
-module mutabu
+module muhomu
 
 go 1.22
 

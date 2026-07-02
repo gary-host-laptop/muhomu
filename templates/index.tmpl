@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <title>無 · new tab</title>
+        <style>{{.CriticalStyle}}</style>
+        <link rel="stylesheet" href="/static/theme.css" />
+        <style>{{.FontStyle}}</style>
+        <link rel="stylesheet" href="/static/fonts.css" />
+        <link rel="stylesheet" href="/static/phosphor-light.css" />
+        <link rel="stylesheet" href="/static/newtab.css" />
+        <link rel="icon" href="/static/assets/icons/favicon.svg" type="image/svg+xml">
+    </head>
+    <body class="{{.BodyClass}}" {{.BodyData}}>
+        <script>
+            window.__INITIAL_DATA__ = {{ .InitialData }};
+        </script>
+        {{ .BgHTML }}
+        <div id="crt"></div>
+        <div id="ctx-menu"></div>
+        <div class="page">
+            <!-- ── HEADER ─────────────────────────────────────────── -->
+            <header class="header">
+                <div class="clock-block">
+                    <div id="clock">00:00:00</div>
+                    <div id="date">loading...</div>
+                </div>
+                <div class="header-right">
+                    <div class="header-right-text">
+                        <div class="header-btns">
+                            <button id="edit-toggle" title="edit mode">
+                                <i class="ph-light ph-pencil-simple"></i>
+                            </button>
+                            <button id="settings-btn" title="settings">
+                                <i class="ph-light ph-gear-six"></i>
+                            </button>
+                        </div>
+                        <div class="header-name-block">
+                            <span id="greeting">こんにちは</span>
+                            <span id="username">{{.Username}}</span>
+                        </div>
+                        <span class="header-deco">▌│█│▌│█ ▌│▌█</span>
+                    </div>
+                    <div id="header-avatar-wrap">
+                        <div id="header-avatar">{{if .ProfileImageURL}}<img src="{{.ProfileImageURL}}" alt="" style="width:100%;height:100%;object-fit:cover;">{{end}}</div>
+                        <span class="av-corner tl"></span>
+                        <span class="av-corner tr"></span>
+                        <span class="av-corner bl"></span>
+                        <span class="av-corner br"></span>
+                    </div>
+                </div>
+            </header>
+
+            <!-- ── SEARCH ─────────────────────────────────────────── -->
+            <div>
+                <div class="accent-strip">
+                    <span></span><span></span><span></span>
+                </div>
+                <div class="search-bar">
+                    <input type="text" id="search-input" placeholder="search..." autocomplete="off" />
+                </div>
+                <div class="search-engines">
+                    {{ .SearchEnginesHTML }}
+                </div>
+            </div>
+
+            <!-- ── MAIN GRID ───────────────────────────────────────── -->
+            <div class="grid">
+                <!-- LEFT COL -->
+                <div id="col-left" style="display:flex;flex-direction:column;gap:14px">
+                    {{range .ColLeft}}{{if .Visible}}{{widgetHTML $.Widgets .ID}}{{end}}{{end}}
+                </div>
+
+                <!-- CENTER COL -->
+                <div id="col-center" class="center-col">
+                    {{range .ColCenter}}{{if .Visible}}{{widgetHTML $.Widgets .ID}}{{end}}{{end}}
+                </div>
+
+                <!-- RIGHT COL -->
+                <div id="col-right" style="display:flex;flex-direction:column;gap:14px">
+                    {{range .ColRight}}{{if .Visible}}{{widgetHTML $.Widgets .ID}}{{end}}{{end}}
+                </div>
+            </div>
+            <!-- /grid -->
+
+            <footer class="page-footer">
+                ┗━ · ━━━━ · 🌐· BUILT WITH SOLIDARITY · ━━━━[● ● ●]━━━━ · v1.1.1 · ━┛
+            </footer>
+        </div>
+        <!-- /page -->
+
+        <script src="/static/i18n.js"></script>
+        <script src="/static/data/defaults.js"></script>
+        <script src="/static/data/quotes.js"></script>
+        <script src="/static/data/words.js"></script>
+        <script src="/static/newtab.js"></script>
+    </body>
+</html>
