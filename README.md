@@ -1,4 +1,4 @@
-# 無タブ · mutabu — self-hosted
+# 無ホム · muhomu
 
 A self-hosted version of the mutabu new tab page, backed by a Go API server and SQLite.
 
@@ -41,35 +41,6 @@ By default:
 -data   string   path to data directory (default "./data")
 -static string   path to static files (default "./static")
 ```
-
----
-
-## New tab redirect
-
-You still need a minimal browser extension to set this as your new tab page. Create a folder with two files:
-
-**manifest.json**
-```json
-{
-  "manifest_version": 2,
-  "name": "mutabu redirect",
-  "version": "1.0.0",
-  "chrome_url_overrides": { "newtab": "newtab.html" },
-  "browser_specific_settings": {
-    "gecko": { "id": "mutabu-redirect@local", "strict_min_version": "128.0" }
-  }
-}
-```
-
-**newtab.html**
-```html
-<!doctype html>
-<html><head>
-<meta http-equiv="refresh" content="0; url=http://localhost:8080">
-</head></html>
-```
-
-Load it as a temporary extension in `about:debugging` or sign it with `web-ext`.
 
 ---
 
