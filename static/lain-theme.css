@@ -1,0 +1,51 @@
+/* ══════════════════════════════════════════════════════════════
+   theme.css — Lain-inspired dark theme
+   ──────────────────────────────────────────────────────────────
+   Colors from monbooru custom.css, adapted for muhomu.
+   ══════════════════════════════════════════════════════════════ */
+
+/* ── Lain Dark (default) ────────────────────────────────────── */
+:root,
+body.theme-dark {
+    /* Backgrounds */
+    --bg: #060912;
+    --panel: #010322;
+    --panel2: #01013d;
+    --titlebar: #010322;
+
+    /* Borders */
+    --border: #3d3b93;
+    --border-lt: #5a5bb0;
+
+    /* Text */
+    --white: #ffffff;
+    --dim: #32b5d1; /* fg-dim – cyan */
+    --dimmer: #3d3b93; /* border colour */
+
+    /* Accents */
+    --accent: #cc0c82; /* hot pink */
+    --accent2: #5eeff5; /* cyan */
+    --accent3: #32b5d1; /* indigo/cyan */
+    --red: #cc0c82; /* reuse pink for errors */
+
+    /* Fonts – keep your existing */
+    --font-pixel: "DotGothic16", monospace;
+    --font-doto: "Medodica", monospace;
+}
+
+/* ── LIGHT theme (keep as is or adapt later) ───────────────── */
+body.theme-light {
+    --bg: #e8e8e8;
+    --panel: #f2f2f2;
+    --panel2: #eaeaea;
+    --border: #c8c8cc;
+    --border-lt: #b0b0b8;
+    --white: #1a1a24;
+    --dim: #5a5a6a;
+    --dimmer: #a0a0b0;
+    --accent: #3a6fd8;
+    --accent2: #7040c8;
+    --accent3: #3a9a3a;
+    --red: #c83030;
+    --titlebar: #dcdce0;
+}

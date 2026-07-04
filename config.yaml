@@ -1,0 +1,77 @@
+# muhomu config — declares the material conditions of the dashboard.
+# Edit this file to configure the app. Restart to apply changes.
+# User-produced data (bookmarks, notes, quick access, recent, quotes)
+# lives in the database and is not configured here.
+
+theme: dark
+font_latin: inter   # inter | share-tech-mono | vt323 | courier-prime
+font_jp: dotgothic16           # dotgothic16 | biz-udgothic | noto-sans-jp
+font_clock: orbitron           # orbitron | medodica | oxanium
+clock_format: 24h              # 24h | 12h
+clock_seconds: false
+clock_theme: theme             # theme | light | dark
+bg_blur: true
+ui_lang: en
+title_lang: ja
+username: "ghost_user"
+search_target: _blank
+
+location:
+  city: "Rafaela"
+  lat: ""
+  lon: ""
+
+search_engines:
+  - name: duckduckgo
+    url: "https://duckduckgo.com/?q="
+    default: true
+  - name: youtube
+    url: "https://www.youtube.com/results?search_query="
+  - name: github
+    url: "https://github.com/search?q="
+
+jlpt_level: all   # n1 | n2 | n3 | n4 | n5 | all
+
+# Image directories — drop files here, app reads them on each request.
+# Paths are relative to the data directory unless absolute.
+# Defaults shown below (no need to set if using defaults):
+# profile_images_dir: images/profile
+# bg_images_dir: images/bg
+# widget_images_dir: widget-images
+
+# Widgets — declare which widgets exist and where they go.
+# Remove a widget from this list to exclude it entirely from the page:
+# no html generated, no js scope, no dom nodes.
+widgets:
+  - id: quick-access
+    col: left
+    order: 1
+  - id: system-stats
+    col: left
+    order: 2
+  - id: rain
+    col: left
+    order: 3
+  - id: quote
+    col: left
+    order: 4
+    
+  - id: bookmarks
+    col: center
+    order: 1
+  - id: notes
+    col: center
+    order: 2
+  - id: recently-visited
+    col: center
+    order: 3
+    
+  - id: timer
+    col: right
+    order: 3
+  - id: image
+    col: right
+    order: 2
+  - id: calendar
+    col: right
+    order: 1

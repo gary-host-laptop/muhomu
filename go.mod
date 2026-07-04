@@ -2,7 +2,10 @@ module muhomu
 
 go 1.22
 
-require modernc.org/sqlite v1.29.9
+require (
+	gopkg.in/yaml.v3 v3.0.1
+	modernc.org/sqlite v1.29.9
+)
 
 require (
 	github.com/dustin/go-humanize v1.0.1 // indirect

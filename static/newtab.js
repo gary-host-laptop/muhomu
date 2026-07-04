@@ -373,10 +373,10 @@ function tick() {
     document.getElementById("date").textContent =
       `${DAYS[now.getDay()].toUpperCase()} · ${MONTHS[now.getMonth()].toUpperCase()} ${now.getDate()} · ${now.getFullYear()}`;
 
-    document.getElementById("day-name").textContent = DAYS[now.getDay()];
-    document.getElementById("week-num").textContent =
-      `W${pad(getWeekNum(now))}`;
-    document.getElementById("year-progress").textContent = getYearProgress(now);
+    const weekEl = document.getElementById("week-num");
+    const yearEl = document.getElementById("year-progress");
+    if (weekEl) weekEl.textContent = `W${pad(getWeekNum(now))}`;
+    if (yearEl) yearEl.textContent = `y · ${Math.round((now - new Date(now.getFullYear(),0,0)) / (new Date(now.getFullYear()+1,0,0) - new Date(now.getFullYear(),0,0)) * 100)}%`;
   }
 }
 window._tickInterval = setInterval(tick, 1000);
@@ -436,6 +436,18 @@ if (notesEl) {
       notesEl.value = "";
       await Store.set("nt_notes", "");
     }
+  });
+  // Flush any pending save on tab close. fetch() is cancelled during
+  // unload so sendBeacon is used — it queues the request at the browser
+  // level and guarantees delivery even as the page tears down.
+  window.addEventListener("beforeunload", () => {
+    if (!notesSaveTimer) return;
+    clearTimeout(notesSaveTimer);
+    notesSaveTimer = null;
+    navigator.sendBeacon(
+      "/api/data",
+      new Blob([JSON.stringify({ nt_notes: notesEl.value })], { type: "application/json" }),
+    );
   });
 }
 
@@ -550,9 +562,7 @@ editToggle.addEventListener("click", () => {
 });
 
 /* ── SETTINGS ───────────────────────────────────────────────── */
-document.getElementById("settings-btn").addEventListener("click", () => {
-  window.location.href = "/static/settings.html";
-});
+// settings page removed — configuration lives in config.yaml
 
 /* ── FAVICON AUTO-FETCH ─────────────────────────────────────── */
 function guessFavicon(url) {
@@ -1367,20 +1377,6 @@ window.addEventListener("load", () => {
   const el = document.getElementById("profile-tagline");
   if (el)
     el.textContent = TAGLINES[Math.floor(Math.random() * TAGLINES.length)];
-})();
-
-/* ── WEATHER FETCH ────────────────────────────────────────────── */
-/* Location was SSR'd for the status widget text; we still need to
-   fetch live temperature on the client since it changes constantly. */
-(function () {
-  const loc = window.__INITIAL_DATA__ && window.__INITIAL_DATA__.nt_location;
-  if (!loc || !loc.lat || !loc.lon) return;
-  const el = document.getElementById("temperature");
-  if (!el) return;
-  fetch(`/api/weather?lat=${loc.lat}&lon=${loc.lon}`)
-    .then((r) => r.json())
-    .then((d) => { el.textContent = `${d.current_weather.temperature}°C`; })
-    .catch(() => { el.textContent = "n/a"; });
 })();
 
 /* ── SEARCH ENGINE WIRING ────────────────────────────────────── */

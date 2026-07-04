@@ -201,42 +201,33 @@ body.font-oxanium #clock {
 
 /* Timer display: fill 60px fixed container */
 body.font-medodica .timer-display {
-    font-family: "Medodica", monospace;
     font-size: 55px;
 }
 body.font-orbitron .timer-display {
-    font-family: "Orbitron", monospace;
     font-size: 42px;
 }
 body.font-oxanium .timer-display {
-    font-family: "Oxanium", monospace;
     font-size: 41px;
 }
 
 /* Timer inputs: height fixed at 28px, font-size is visual only */
 body.font-medodica .timer-input {
-    font-family: "Medodica", monospace;
     font-size: 22px;
 }
 body.font-orbitron .timer-input {
-    font-family: "Orbitron", monospace;
     font-size: 15px;
 }
 body.font-oxanium .timer-input {
-    font-family: "Oxanium", monospace;
     font-size: 15px;
 }
 
 body.font-medodica .timer-sep {
-    font-family: "Medodica", monospace;
     font-size: 24px;
 }
 body.font-orbitron .timer-sep {
-    font-family: "Orbitron", monospace;
     font-size: 16px;
 }
 body.font-oxanium .timer-sep {
-    font-family: "Oxanium", monospace;
     font-size: 16px;
 }
 
@@ -1610,4 +1601,179 @@ body.edit-mode .fav-tile.drag-over {
     display: block;
     width: 100%;
     height: 150px;
+}
+
+/* ─── CALENDAR WIDGET ───────────────────────────────────── */
+#calendarTable {
+    border-collapse: collapse;
+    font: inherit;
+    color: inherit;
+    background: transparent;
+    table-layout: fixed;
+    width: 90%;
+    margin: 0 auto;
+}
+
+#calendarTable td {
+    padding: 0 0.5em;
+    text-align: center;
+    vertical-align: middle;
+    white-space: nowrap;
+    height: 1.1em;
+}
+
+.cal-header-year {
+    text-align: left;
+    padding: 0.2em 0.4em 0.1em;
+    font-family: var(--font-doto), monospace;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    color: var(--dim);
+    text-transform: lowercase;
+    border-bottom: none;
+}
+
+.col-left-num {
+    text-align: right;
+    min-width: 2.8em;
+    border-right: 1px solid var(--border);
+    font-family: var(--font-doto), monospace;
+    font-weight: 700;
+    font-size: 12px;
+    letter-spacing: 0.5px;
+}
+.col-left-wk {
+    text-align: left;
+    min-width: 1.8em;
+    font-family: var(--font-pixel);
+    font-size: 10px;
+    color: var(--dim);
+    text-transform: lowercase;
+}
+.col-right-num {
+    text-align: right;
+    min-width: 2.8em;
+    border-right: 1px solid var(--border);
+    font-family: var(--font-doto), monospace;
+    font-weight: 700;
+    font-size: 12px;
+    letter-spacing: 0.5px;
+}
+.col-right-wk {
+    text-align: left;
+    min-width: 1.8em;
+    font-family: var(--font-pixel);
+    font-size: 10px;
+    color: var(--dim);
+    text-transform: lowercase;
+}
+
+.today .col-left-num,
+.today .col-left-wk,
+.today .col-right-num,
+.today .col-right-wk {
+    color: var(--accent);
+    text-shadow: 0 0 8px rgba(138, 180, 248, 0.25);
+}
+
+.spacer-col1 {
+    border-right: 1px solid var(--border);
+    min-width: 2.8em;
+    height: 0.2em;
+    padding: 0;
+}
+.spacer-col2,
+.spacer-col3,
+.spacer-col4 {
+    height: 0.2em;
+    padding: 0;
+}
+
+.connector-col1 {
+    border-right: 1px solid var(--border);
+    min-width: 2.8em;
+    height: 0.2em;
+    padding: 0;
+}
+.connector-col2 {
+    border-bottom: 1px solid var(--border);
+    min-width: 1.8em;
+    height: 0.2em;
+    padding: 0;
+}
+.connector-col3 {
+    border-bottom: 1px solid var(--border);
+    border-right: 1px solid var(--border);
+    min-width: 2.8em;
+    height: 0.2em;
+    padding: 0;
+}
+.connector-col4 {
+    border-bottom: 1px solid var(--border);
+    min-width: 1.8em;
+    height: 0.2em;
+    padding: 0;
+}
+
+.footer-text-col1-3 {
+    text-align: left;
+    padding-left: 0.3em;
+    border-right: 1px solid var(--border);
+    font-size: 0.85em;
+    line-height: 1.2;
+    vertical-align: middle;
+    padding-top: 0.1em;
+    padding-bottom: 0.1em;
+    font-family: var(--font-doto), monospace;
+    font-weight: 700;
+    letter-spacing: 1px;
+    color: var(--dim);
+}
+.footer-spacer {
+    padding: 0;
+    width: 1.2em;
+    min-width: 1.2em;
+}
+.footer-sep-line {
+    border-bottom: 1px solid var(--border);
+    border-right: 1px solid var(--border);
+    height: 0.2em;
+    padding: 0;
+}
+.footer-sep-spacer {
+    padding: 0;
+    width: 1.2em;
+    min-width: 1.2em;
+}
+
+.month-box-col1 { min-width: 2.8em; }
+.month-box-col2 { min-width: 1.8em; }
+.month-box-top {
+    border-top: 1px solid var(--border);
+    border-left: 1px solid var(--border);
+    border-right: 1px solid var(--border);
+    height: 0.2em;
+    padding: 0;
+}
+.month-box-mid {
+    border-left: 1px solid var(--border);
+    border-right: 1px solid var(--border);
+    text-align: center;
+    padding: 0.1em 0.3em;
+}
+.month-number-large {
+    font-family: var(--font-doto), monospace;
+    font-size: 1.3em;
+    line-height: 1.2;
+    font-weight: 700;
+    color: var(--white);
+    letter-spacing: 2px;
+}
+.month-box-bot {
+    border-bottom: 1px solid var(--border);
+    border-left: 1px solid var(--border);
+    border-right: 1px solid var(--border);
+    height: 0.2em;
+    padding: 0;
 }

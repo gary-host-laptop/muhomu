@@ -68,17 +68,17 @@
             <div class="grid">
                 <!-- LEFT COL -->
                 <div id="col-left" style="display:flex;flex-direction:column;gap:14px">
-                    {{range .ColLeft}}{{if .Visible}}{{widgetHTML $.Widgets .ID}}{{end}}{{end}}
+                    {{range .ColLeft}}{{widgetHTML $.Widgets .ID}}{{end}}
                 </div>
 
                 <!-- CENTER COL -->
                 <div id="col-center" class="center-col">
-                    {{range .ColCenter}}{{if .Visible}}{{widgetHTML $.Widgets .ID}}{{end}}{{end}}
+                    {{range .ColCenter}}{{widgetHTML $.Widgets .ID}}{{end}}
                 </div>
 
                 <!-- RIGHT COL -->
                 <div id="col-right" style="display:flex;flex-direction:column;gap:14px">
-                    {{range .ColRight}}{{if .Visible}}{{widgetHTML $.Widgets .ID}}{{end}}{{end}}
+                    {{range .ColRight}}{{widgetHTML $.Widgets .ID}}{{end}}
                 </div>
             </div>
             <!-- /grid -->

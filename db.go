@@ -2,7 +2,6 @@ package main
 
 import (
 	"database/sql"
-	"encoding/json"
 	"fmt"
 	"log"
 
@@ -18,47 +17,43 @@ func initDB(path string) error {
 		return err
 	}
 
+	// Schema contains only user-produced content.
+	// All configuration lives in config.yaml.
 	schema := `
-	CREATE TABLE IF NOT EXISTS settings (
-		key   TEXT PRIMARY KEY,
-		value TEXT NOT NULL
-	);
-
 	CREATE TABLE IF NOT EXISTS bookmarks (
-		id       INTEGER PRIMARY KEY AUTOINCREMENT,
-		folder   TEXT NOT NULL,
-		label    TEXT NOT NULL,
-		url      TEXT NOT NULL,
-		favicon  TEXT NOT NULL DEFAULT '',
-		position INTEGER NOT NULL DEFAULT 0,
+		id           INTEGER PRIMARY KEY AUTOINCREMENT,
+		folder       TEXT    NOT NULL,
+		label        TEXT    NOT NULL,
+		url          TEXT    NOT NULL,
+		favicon      TEXT    NOT NULL DEFAULT '',
+		position     INTEGER NOT NULL DEFAULT 0,
 		folder_order INTEGER NOT NULL DEFAULT 0
 	);
 
 	CREATE TABLE IF NOT EXISTS quick_access (
 		id       INTEGER PRIMARY KEY AUTOINCREMENT,
-		label    TEXT NOT NULL,
-		url      TEXT NOT NULL,
-		favicon  TEXT NOT NULL DEFAULT '',
+		label    TEXT    NOT NULL,
+		url      TEXT    NOT NULL,
+		favicon  TEXT    NOT NULL DEFAULT '',
 		position INTEGER NOT NULL DEFAULT 0
 	);
 
 	CREATE TABLE IF NOT EXISTS recent (
 		id       INTEGER PRIMARY KEY AUTOINCREMENT,
-		name     TEXT NOT NULL,
-		url      TEXT NOT NULL,
+		name     TEXT    NOT NULL,
+		url      TEXT    NOT NULL,
 		added_at INTEGER NOT NULL DEFAULT (strftime('%s','now'))
 	);
 
 	CREATE TABLE IF NOT EXISTS notes (
 		id      INTEGER PRIMARY KEY CHECK (id = 1),
-		content TEXT NOT NULL DEFAULT ''
+		content TEXT    NOT NULL DEFAULT ''
 	);
 
-	CREATE TABLE IF NOT EXISTS images (
-		id       INTEGER PRIMARY KEY AUTOINCREMENT,
-		type     TEXT NOT NULL,
-		filename TEXT NOT NULL,
-		position INTEGER NOT NULL DEFAULT 0
+	CREATE TABLE IF NOT EXISTS quotes (
+		id     INTEGER PRIMARY KEY AUTOINCREMENT,
+		text   TEXT NOT NULL,
+		author TEXT NOT NULL DEFAULT ''
 	);
 
 	CREATE VIRTUAL TABLE IF NOT EXISTS bookmarks_fts USING fts5(
@@ -66,14 +61,18 @@ func initDB(path string) error {
 	);
 
 	CREATE TRIGGER IF NOT EXISTS bookmarks_ai AFTER INSERT ON bookmarks BEGIN
-		INSERT INTO bookmarks_fts(rowid, label, url, folder) VALUES (new.id, new.label, new.url, new.folder);
+		INSERT INTO bookmarks_fts(rowid, label, url, folder)
+		VALUES (new.id, new.label, new.url, new.folder);
 	END;
 	CREATE TRIGGER IF NOT EXISTS bookmarks_ad AFTER DELETE ON bookmarks BEGIN
-		INSERT INTO bookmarks_fts(bookmarks_fts, rowid, label, url, folder) VALUES ('delete', old.id, old.label, old.url, old.folder);
+		INSERT INTO bookmarks_fts(bookmarks_fts, rowid, label, url, folder)
+		VALUES ('delete', old.id, old.label, old.url, old.folder);
 	END;
 	CREATE TRIGGER IF NOT EXISTS bookmarks_au AFTER UPDATE ON bookmarks BEGIN
-		INSERT INTO bookmarks_fts(bookmarks_fts, rowid, label, url, folder) VALUES ('delete', old.id, old.label, old.url, old.folder);
-		INSERT INTO bookmarks_fts(rowid, label, url, folder) VALUES (new.id, new.label, new.url, new.folder);
+		INSERT INTO bookmarks_fts(bookmarks_fts, rowid, label, url, folder)
+		VALUES ('delete', old.id, old.label, old.url, old.folder);
+		INSERT INTO bookmarks_fts(rowid, label, url, folder)
+		VALUES (new.id, new.label, new.url, new.folder);
 	END;
 
 	INSERT OR IGNORE INTO notes (id, content) VALUES (1, '');
@@ -83,82 +82,7 @@ func initDB(path string) error {
 	return err
 }
 
-// ── SETTINGS ──────────────────────────────────────────────────────────────────
-
-func getSetting(key string) (interface{}, error) {
-	var val string
-	err := db.QueryRow("SELECT value FROM settings WHERE key = ?", key).Scan(&val)
-	if err == sql.ErrNoRows {
-		return nil, nil
-	}
-	if err != nil {
-		return nil, err
-	}
-	var result interface{}
-	if err := json.Unmarshal([]byte(val), &result); err != nil {
-		return val, nil
-	}
-	return result, nil
-}
-
-func getAllSettings() (map[string]interface{}, error) {
-	rows, err := db.Query("SELECT key, value FROM settings")
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	result := map[string]interface{}{}
-	for rows.Next() {
-		var k, v string
-		if err := rows.Scan(&k, &v); err != nil {
-			continue
-		}
-		var val interface{}
-		if err := json.Unmarshal([]byte(v), &val); err != nil {
-			result[k] = v
-		} else {
-			result[k] = val
-		}
-	}
-	return result, nil
-}
-
-func setSetting(key string, value interface{}) error {
-	b, err := json.Marshal(value)
-	if err != nil {
-		return err
-	}
-	_, err = db.Exec("INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)", key, string(b))
-	return err
-}
-
-func setSettings(data map[string]interface{}) error {
-	tx, err := db.Begin()
-	if err != nil {
-		return err
-	}
-	defer tx.Rollback()
-
-	stmt, err := tx.Prepare("INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)")
-	if err != nil {
-		return err
-	}
-	defer stmt.Close()
-
-	for k, v := range data {
-		b, err := json.Marshal(v)
-		if err != nil {
-			continue
-		}
-		if _, err := stmt.Exec(k, string(b)); err != nil {
-			return err
-		}
-	}
-	return tx.Commit()
-}
-
-// ── NOTES ──────────────────────────────────────────────────────────────────────
+// ── NOTES ─────────────────────────────────────────────────────
 
 func getNotes() (string, error) {
 	var content string
@@ -171,13 +95,13 @@ func setNotes(content string) error {
 	return err
 }
 
-// ── BOOKMARKS ──────────────────────────────────────────────────────────────────
+// ── BOOKMARKS ─────────────────────────────────────────────────
 
 type BookmarkLink struct {
-	ID     int    `json:"id,omitempty"`
-	Label  string `json:"label"`
-	URL    string `json:"url"`
-	Fav    string `json:"fav"`
+	ID    int    `json:"id,omitempty"`
+	Label string `json:"label"`
+	URL   string `json:"url"`
+	Fav   string `json:"fav"`
 }
 
 type BookmarkFolder struct {
@@ -209,7 +133,7 @@ func getBookmarks() ([]BookmarkFolder, error) {
 			folderMap[folder] = &BookmarkFolder{Folder: folder, Links: []BookmarkLink{}}
 			folderOrder = append(folderOrder, folder)
 		}
-		// pos == -1 is a sentinel row for an empty folder — skip adding a link
+		// pos == -1 is a sentinel row for empty folders
 		if pos >= 0 && label != "" {
 			folderMap[folder].Links = append(folderMap[folder].Links, BookmarkLink{
 				ID: id, Label: label, URL: url, Fav: favicon,
@@ -246,8 +170,7 @@ func setBookmarks(folders []BookmarkFolder) error {
 
 	for fi, folder := range folders {
 		if len(folder.Links) == 0 {
-			// Insert a placeholder row so the empty folder persists.
-			// label="" url="" sentinel is filtered out on read.
+			// sentinel row preserves empty folders
 			if _, err := stmt.Exec(folder.Folder, "", "", "", fi, -1); err != nil {
 				return err
 			}
@@ -283,12 +206,17 @@ func searchBookmarks(q string) ([]BookmarkLink, error) {
 		if err := rows.Scan(&id, &folder, &label, &url, &favicon); err != nil {
 			continue
 		}
-		results = append(results, BookmarkLink{ID: id, Label: label, URL: fmt.Sprintf("[%s] %s", folder, url), Fav: favicon})
+		results = append(results, BookmarkLink{
+			ID:    id,
+			Label: label,
+			URL:   fmt.Sprintf("[%s] %s", folder, url),
+			Fav:   favicon,
+		})
 	}
 	return results, nil
 }
 
-// ── QUICK ACCESS ───────────────────────────────────────────────────────────────
+// ── QUICK ACCESS ──────────────────────────────────────────────
 
 type QuickItem struct {
 	Label   string `json:"label"`
@@ -339,7 +267,7 @@ func setQuickAccess(items []QuickItem) error {
 	return tx.Commit()
 }
 
-// ── RECENT ─────────────────────────────────────────────────────────────────────
+// ── RECENT ────────────────────────────────────────────────────
 
 type RecentItem struct {
 	Name string `json:"name"`
@@ -389,50 +317,43 @@ func setRecent(items []RecentItem) error {
 	return tx.Commit()
 }
 
-// ── IMAGES ─────────────────────────────────────────────────────────────────────
+// ── QUOTES ────────────────────────────────────────────────────
 
-type ImageRecord struct {
-	ID       int    `json:"id"`
-	Type     string `json:"type"`
-	Filename string `json:"filename"`
-	URL      string `json:"url"`
+type Quote struct {
+	ID     int    `json:"id,omitempty"`
+	Text   string `json:"text"`
+	Author string `json:"author"`
 }
 
-func getImages(imgType string) ([]ImageRecord, error) {
-	rows, err := db.Query("SELECT id, type, filename FROM images WHERE type = ? ORDER BY position", imgType)
+func getQuotes() ([]Quote, error) {
+	rows, err := db.Query("SELECT id, text, author FROM quotes ORDER BY id")
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
 
-	var imgs []ImageRecord
+	var quotes []Quote
 	for rows.Next() {
-		var img ImageRecord
-		if err := rows.Scan(&img.ID, &img.Type, &img.Filename); err != nil {
+		var q Quote
+		if err := rows.Scan(&q.ID, &q.Text, &q.Author); err != nil {
 			continue
 		}
-		img.URL = "/api/images/" + img.Filename
-		imgs = append(imgs, img)
+		quotes = append(quotes, q)
 	}
-	return imgs, nil
+	return quotes, nil
 }
 
-func addImage(imgType, filename string) (ImageRecord, error) {
-	var maxPos int
-	db.QueryRow("SELECT COALESCE(MAX(position), -1) FROM images WHERE type = ?", imgType).Scan(&maxPos)
-
-	res, err := db.Exec("INSERT INTO images (type, filename, position) VALUES (?, ?, ?)", imgType, filename, maxPos+1)
+func addQuote(text, author string) (Quote, error) {
+	res, err := db.Exec("INSERT INTO quotes (text, author) VALUES (?, ?)", text, author)
 	if err != nil {
-		return ImageRecord{}, err
+		return Quote{}, err
 	}
 	id, _ := res.LastInsertId()
-	return ImageRecord{
-		ID: int(id), Type: imgType, Filename: filename, URL: "/api/images/" + filename,
-	}, nil
+	return Quote{ID: int(id), Text: text, Author: author}, nil
 }
 
-func deleteImage(filename string) error {
-	_, err := db.Exec("DELETE FROM images WHERE filename = ?", filename)
+func deleteQuote(id int) error {
+	_, err := db.Exec("DELETE FROM quotes WHERE id = ?", id)
 	return err
 }
 

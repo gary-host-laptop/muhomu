@@ -19,7 +19,7 @@ COPY --from=builder /build/muhomu .
 COPY static/ ./static/
 COPY templates/ ./templates/
 
-RUN mkdir -p /data/images
+RUN mkdir -p /data/images/profile /data/images/bg /data/images/favicons /data/widget-images
 
 EXPOSE 4444
 
@@ -27,4 +27,4 @@ ENV PORT=4444
 ENV DATA_DIR=/data
 ENV STATIC_DIR=/app/static
 
-CMD ["./muhomu", "-port", "4444", "-data", "/data", "-static", "/app/static"]
+CMD ["./muhomu", "-port", "4444", "-data", "/data", "-static", "/app/static", "-config", "/data/config.yaml"]
