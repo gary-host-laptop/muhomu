@@ -1,19 +1,15 @@
-# Binaries
-mutabu
-*.exe
-*.dll
-*.so
-*.dylib
-
-# Data (keep if you want to track settings/images? usually exclude)
+# runtime data — not source code
 data/
 *.db
-*.sqlite
 
-# IDE
-.vscode/
-.idea/
+# host-mounted image directories
+profile-images/
+bg-images/
+widget-images/
 
-# OS
-.DS_Store
-Thumbs.db
+# build artifacts
+muhomu
+
+# static data files are source code, not runtime data
+!static/data/
+!static/data/*
