@@ -46,7 +46,7 @@ widgets:
   - id: quick-access
     col: left
     order: 1
-  - id: system-stats
+  - id: image
     col: left
     order: 2
   - id: rain
@@ -66,12 +66,12 @@ widgets:
     col: center
     order: 3
     
+  - id: system-stats
+    col: right
+    order: 1  
+  - id: calendar
+    col: right
+    order: 2
   - id: timer
     col: right
     order: 3
-  - id: image
-    col: right
-    order: 2
-  - id: calendar
-    col: right
-    order: 1

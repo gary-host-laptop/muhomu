@@ -1623,13 +1623,13 @@ body.edit-mode .fav-tile.drag-over {
 }
 
 .cal-header-year {
-    text-align: left;
-    padding: 0.2em 0.4em 0.1em;
-    font-family: var(--font-doto), monospace;
-    font-size: 11px;
+    text-align: center;
+    padding: 0.1em 0.4em;
+    font-family: var(--font-pixel);
+    font-size: 13px;
     font-weight: 700;
-    letter-spacing: 1.5px;
-    color: var(--dim);
+    letter-spacing: 2px;
+    color: var(--accent);
     text-transform: lowercase;
     border-bottom: none;
 }
@@ -1669,10 +1669,7 @@ body.edit-mode .fav-tile.drag-over {
     text-transform: lowercase;
 }
 
-.today .col-left-num,
-.today .col-left-wk,
-.today .col-right-num,
-.today .col-right-wk {
+td.today {
     color: var(--accent);
     text-shadow: 0 0 8px rgba(138, 180, 248, 0.25);
 }
