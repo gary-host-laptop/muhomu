@@ -527,17 +527,6 @@ body.theme-light .tile-edit:hover {
     );
 }
 
-.widget::before {
-    content: "";
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 18px;
-    height: 1px;
-    background: var(--border-lt);
-    z-index: 1;
-}
-
 /* ─── WIDGET TITLE ──────────────────────────────────── */
 .widget-title {
     display: flex;
@@ -1744,8 +1733,12 @@ td.today {
     min-width: 1.2em;
 }
 
-.month-box-col1 { min-width: 2.8em; }
-.month-box-col2 { min-width: 1.8em; }
+.month-box-col1 {
+    min-width: 2.8em;
+}
+.month-box-col2 {
+    min-width: 1.8em;
+}
 .month-box-top {
     border-top: 1px solid var(--border);
     border-left: 1px solid var(--border);

@@ -185,6 +185,7 @@ func serveIndex(w http.ResponseWriter, r *http.Request) {
 	}
 
 	widgetMap := make(map[string]template.HTML)
+	var widgetScripts strings.Builder
 	for _, wCfg := range cfg.Widgets {
 		widget, ok := registry[wCfg.ID]
 		if !ok {
@@ -197,6 +198,11 @@ func serveIndex(w http.ResponseWriter, r *http.Request) {
 			continue
 		}
 		widgetMap[wCfg.ID] = html
+		if s, ok := widget.(widgets.Scriptable); ok {
+			widgetScripts.WriteString("\n/* " + wCfg.ID + " */\n")
+			widgetScripts.WriteString(s.Script())
+			widgetScripts.WriteString("\n")
+		}
 	}
 
 	// Column layout from config.
@@ -365,6 +371,7 @@ func serveIndex(w http.ResponseWriter, r *http.Request) {
 		ColCenter         []colWidget
 		ColRight          []colWidget
 		InitialData       template.JS
+		WidgetScripts     template.JS
 	}{
 		BodyClass: strings.TrimSpace("theme-" + cfg.Theme + " " + fontClass + " " + clockClass),
 		BodyData: template.HTMLAttr(fmt.Sprintf(
@@ -384,6 +391,7 @@ func serveIndex(w http.ResponseWriter, r *http.Request) {
 		ColCenter:         toTmpl(colCenter),
 		ColRight:          toTmpl(colRight),
 		InitialData:       template.JS(jsonInitial),
+		WidgetScripts:     template.JS(widgetScripts.String()),
 	}
 
 	tmpl, err := template.New("index.tmpl").Funcs(template.FuncMap{

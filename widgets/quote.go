@@ -28,3 +28,20 @@ func (w *QuoteWidget) Render(ctx RenderContext) (template.HTML, error) {
 		`<button class="wt-act" id="quote-next"><i class="ph-light ph-caret-right"></i></button>`,
 		inner), nil
 }
+
+func (w *QuoteWidget) Script() string {
+	return `(function(){
+  const textEl=document.getElementById("quote-text");
+  const authEl=document.getElementById("quote-author");
+  if(!textEl||!authEl)return;
+  let idx=0;
+  const currentText=textEl.textContent.trim();
+  const found=QUOTES.findIndex(q=>q.text===currentText);
+  idx=found!==-1?found:Math.floor(Math.random()*QUOTES.length);
+  document.getElementById("quote-next")?.addEventListener("click",()=>{
+    let next;
+    do{next=Math.floor(Math.random()*QUOTES.length);}while(next===idx&&QUOTES.length>1);
+    idx=next;textEl.textContent=QUOTES[idx].text;authEl.textContent=QUOTES[idx].author;
+  });
+})();`
+}

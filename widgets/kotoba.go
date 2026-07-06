@@ -44,3 +44,29 @@ func (w *KotobaWidget) Render(ctx RenderContext) (template.HTML, error) {
 		`<button class="wt-act" id="kanji-next"><i class="ph-light ph-caret-right"></i></button>`,
 		inner), nil
 }
+
+func (w *KotobaWidget) Script() string {
+	return `(function(){
+  const charEl=document.getElementById("kanji-char");
+  if(!charEl)return;
+  function renderWord(w){
+    charEl.innerHTML="";
+    const a=document.createElement("a");
+    a.href="https://jisho.org/search/"+encodeURIComponent(w.k)+"%20%23kanji";
+    a.target="_blank";a.style.cssText="color:inherit;text-decoration:none;";a.textContent=w.k;
+    charEl.appendChild(a);
+    const r=document.getElementById("kanji-reading");if(r)r.textContent=w.r;
+    const m=document.getElementById("kanji-meaning");if(m)m.textContent=w.m;
+    const l=document.getElementById("kanji-level");if(l){l.textContent=w.l.toUpperCase();l.className="kanji-level "+w.l;}
+  }
+  let idx=0;
+  const cur=charEl.textContent.trim();
+  const found=WORDS.findIndex(w=>w.k===cur);
+  idx=found!==-1?found:Math.floor(Math.random()*WORDS.length);
+  document.getElementById("kanji-next")?.addEventListener("click",()=>{
+    let next;
+    do{next=Math.floor(Math.random()*WORDS.length);}while(next===idx&&WORDS.length>1);
+    idx=next;renderWord(WORDS[idx]);
+  });
+})();`
+}

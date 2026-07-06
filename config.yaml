@@ -22,8 +22,8 @@ location:
   lon: ""
 
 search_engines:
-  - name: duckduckgo
-    url: "https://duckduckgo.com/?q="
+  - name: degoog
+    url: "http://localhost:8388/search?q="
     default: true
   - name: youtube
     url: "https://www.youtube.com/results?search_query="
