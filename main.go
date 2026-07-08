@@ -107,7 +107,7 @@ func main() {
 		os.MkdirAll(d, 0755)
 	}
 
-	dbPath := filepath.Join(*dataDir, "mutabu.db")
+	dbPath := filepath.Join(*dataDir, "muhomu.db")
 	if err := initDB(dbPath); err != nil {
 		log.Fatal("failed to init db:", err)
 	}
