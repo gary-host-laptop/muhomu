@@ -151,6 +151,60 @@ func main() {
 	}
 }
 
+// ── collectWidgetScripts ──────────────────────────────────────
+// Recursively walks the widget tree and collects all Script() output.
+func collectWidgetScripts(registry map[string]widgets.Widget, configs []WidgetConfig, ctx widgets.RenderContext) string {
+	var sb strings.Builder
+	for _, cfg := range configs {
+		w, ok := registry[cfg.ID]
+		if !ok {
+			continue
+		}
+		// If it's a split-column, recurse into its children
+		if cfg.ID == "split-column" {
+			if rawChildren, ok := cfg.Options["widgets"].([]interface{}); ok {
+				var childConfigs []WidgetConfig
+				for _, raw := range rawChildren {
+					m, ok := raw.(map[string]interface{})
+					if !ok {
+						continue
+					}
+					id, _ := m["id"].(string)
+					if id == "" {
+						id, _ = m["type"].(string)
+					}
+					if id == "" {
+						continue
+					}
+					opts, _ := m["options"].(map[string]interface{})
+					if opts == nil {
+						opts = make(map[string]interface{})
+					}
+					// copy top-level keys as options
+					for k, v := range m {
+						if k != "id" && k != "type" && k != "options" {
+							opts[k] = v
+						}
+					}
+					childConfigs = append(childConfigs, WidgetConfig{
+						ID:      id,
+						Options: opts,
+					})
+				}
+				// recurse
+				sb.WriteString(collectWidgetScripts(registry, childConfigs, ctx))
+			}
+		} else {
+			if s, ok := w.(widgets.Scriptable); ok {
+				sb.WriteString("\n/* " + cfg.ID + " */\n")
+				sb.WriteString(s.Script())
+				sb.WriteString("\n")
+			}
+		}
+	}
+	return sb.String()
+}
+
 // ── serveIndex ───────────────────────────────────────────────
 func serveIndex(w http.ResponseWriter, r *http.Request) {
 	if r.URL.Path != "/" {
@@ -169,9 +223,6 @@ func serveIndex(w http.ResponseWriter, r *http.Request) {
 
 	rng := rand.New(rand.NewSource(time.Now().UnixNano()))
 
-	// Build widget html — only active widgets produce output.
-	// The registry contains all possible widgets; config.yaml
-	// declares which ones actually exist on this instance.
 	registry := widgets.Registry()
 	ctx := widgets.RenderContext{
 		DB:             db,
@@ -184,31 +235,35 @@ func serveIndex(w http.ResponseWriter, r *http.Request) {
 		TitleLang:      cfg.TitleLang,
 	}
 
+	// ── Render widgets and collect HTML ──
 	widgetMap := make(map[string]template.HTML)
-	var widgetScripts strings.Builder
+	var allConfigs []WidgetConfig // flat list of top-level widgets for script collection
+
 	for _, col := range cfg.Columns {
 		for _, wCfg := range col.Widgets {
+			allConfigs = append(allConfigs, wCfg) // track top-level configs
+
 			widget, ok := registry[wCfg.ID]
 			if !ok {
 				log.Printf("serveIndex: unknown widget %q in config — skipping", wCfg.ID)
 				continue
 			}
-			html, err := widget.Render(ctx)
+			// pass the widget's options to RenderContext
+			ctxWithOpts := ctx
+			ctxWithOpts.Options = wCfg.Options
+			html, err := widget.Render(ctxWithOpts)
 			if err != nil {
 				log.Printf("serveIndex: widget %q render error: %v", wCfg.ID, err)
 				continue
 			}
 			widgetMap[wCfg.ID] = html
-			if s, ok := widget.(widgets.Scriptable); ok {
-				widgetScripts.WriteString("\n/* " + wCfg.ID + " */\n")
-				widgetScripts.WriteString(s.Script())
-				widgetScripts.WriteString("\n")
-			}
 		}
 	}
 
-	// Columns are passed directly to the template as typed structs.
-	// The template iterates columns and renders each widget in declaration order.
+	// ── Collect scripts recursively ──
+	widgetScripts := collectWidgetScripts(registry, allConfigs, ctx)
+
+	// ── Columns for template ──
 	type tmplWidget struct{ ID string }
 	type tmplColumn struct {
 		Size    string
@@ -223,7 +278,7 @@ func serveIndex(w http.ResponseWriter, r *http.Request) {
 		tmplCols = append(tmplCols, tc)
 	}
 
-	// Fonts.
+	// ── Fonts ──
 	fontLatinMap := map[string]string{
 		"inter":           "'Inter', sans-serif",
 		"share-tech-mono": "'Share Tech Mono', monospace",
@@ -261,7 +316,7 @@ func serveIndex(w http.ResponseWriter, r *http.Request) {
 		clockClass = "clock-force-dark"
 	}
 
-	// Background.
+	// ── Background ──
 	bgImageURL := pickImage(appCfg.bgDir, "/api/images/bg/", rng)
 	bgHTML := template.HTML(`<div id="bg"></div>`)
 	if bgImageURL != "" {
@@ -272,10 +327,10 @@ func serveIndex(w http.ResponseWriter, r *http.Request) {
 		bgHTML = template.HTML(`<div id="bg"` + cls + `><img src="` + bgImageURL + `" alt=""></div>`)
 	}
 
-	// Profile image.
+	// ── Profile image ──
 	profImageURL := pickImage(appCfg.profileDir, "/api/images/profile/", rng)
 
-	// Search engines.
+	// ── Search engines ──
 	var enginesHTML strings.Builder
 	for _, e := range cfg.SearchEngines {
 		active := ""
@@ -290,7 +345,7 @@ func serveIndex(w http.ResponseWriter, r *http.Request) {
 		enginesHTML.WriteString(`<button class="engine-btn active" data-url="https://duckduckgo.com/?q=">duckduckgo</button>`)
 	}
 
-	// Critical style — colors inlined before theme.css to prevent flash.
+	// ── Critical style ──
 	themeVars := map[string]map[string]string{
 		"dark": {
 			"--bg":        "#060608",
@@ -345,7 +400,7 @@ func serveIndex(w http.ResponseWriter, r *http.Request) {
 		fontStyle = template.CSS("body.theme-" + cfg.Theme + "{" + strings.Join(fontParts, ";") + "}")
 	}
 
-	// JS seed — only mutable user data.
+	// ── JS seed ──
 	rawBookmarks, _ := getBookmarks()
 	rawQuick, _ := getQuickAccess()
 	rawRecent, _ := getRecent()
@@ -390,7 +445,7 @@ func serveIndex(w http.ResponseWriter, r *http.Request) {
 		Widgets:           widgetMap,
 		Columns:           tmplCols,
 		InitialData:       template.JS(jsonInitial),
-		WidgetScripts:     template.JS(widgetScripts.String()),
+		WidgetScripts:     template.JS(widgetScripts),
 	}
 
 	tmpl, err := template.New("index.tmpl").Funcs(template.FuncMap{

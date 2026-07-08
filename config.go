@@ -61,7 +61,8 @@ type ColumnConfig struct {
 // Additional fields may be added per-widget in future
 // to carry widget-specific configuration.
 type WidgetConfig struct {
-	ID string `yaml:"id"`
+	ID      string                 `yaml:"id"`
+	Options map[string]interface{} `yaml:"options"`
 }
 
 var cfg AppConfig
@@ -82,8 +83,8 @@ func defaultConfig() AppConfig {
 		JLPTLevel:    "all",
 		SearchEngines: []SearchEngine{
 			{Name: "duckduckgo", URL: "https://duckduckgo.com/?q=", Default: true},
-			{Name: "youtube",    URL: "https://www.youtube.com/results?search_query="},
-			{Name: "github",     URL: "https://github.com/search?q="},
+			{Name: "youtube", URL: "https://www.youtube.com/results?search_query="},
+			{Name: "github", URL: "https://github.com/search?q="},
 		},
 		Columns: []ColumnConfig{
 			{Size: "small", Widgets: []WidgetConfig{

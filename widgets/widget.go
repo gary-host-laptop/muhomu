@@ -26,6 +26,7 @@ type RenderContext struct {
 	WidgetImageDir string
 	JLPTLevel      string
 	TitleLang      string
+	Options        map[string]interface{}
 }
 
 // Widget is the interface every widget implements. Its two methods
@@ -63,6 +64,7 @@ func Registry() map[string]Widget {
 		&TimerWidget{},
 		&RainWidget{},
 		&CalendarWidget{},
+		&SplitColumnWidget{},
 	}
 	m := make(map[string]Widget, len(all))
 	for _, w := range all {

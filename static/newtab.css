@@ -1749,8 +1749,12 @@ td.today {
     min-width: 1.2em;
 }
 
-.month-box-col1 { min-width: 2.8em; }
-.month-box-col2 { min-width: 1.8em; }
+.month-box-col1 {
+    min-width: 2.8em;
+}
+.month-box-col2 {
+    min-width: 1.8em;
+}
 .month-box-top {
     border-top: 1px solid var(--border);
     border-left: 1px solid var(--border);
@@ -1778,4 +1782,19 @@ td.today {
     border-right: 1px solid var(--border);
     height: 0.2em;
     padding: 0;
+}
+
+/* ─── SPLIT COLUMN ─────────────────────────────────── */
+.split-column {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 14px;
+    width: 100%;
+}
+
+.split-col {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    min-width: 0; /* prevent overflow */
 }
