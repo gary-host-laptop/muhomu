@@ -79,9 +79,9 @@ var appCfg struct {
 }
 
 func main() {
-	port       := flag.String("port", "8080", "port to listen on")
-	dataDir    := flag.String("data", "./data", "path to data directory")
-	staticDir  := flag.String("static", "./static", "path to static files")
+	port := flag.String("port", "8080", "port to listen on")
+	dataDir := flag.String("data", "./data", "path to data directory")
+	staticDir := flag.String("static", "./static", "path to static files")
 	configPath := flag.String("config", "./config.yaml", "path to config file")
 	flag.Parse()
 
@@ -94,11 +94,11 @@ func main() {
 		return filepath.Join(*dataDir, def)
 	}
 
-	appCfg.profileDir      = resolve(cfg.ProfileImagesDir, "images/profile")
-	appCfg.bgDir           = resolve(cfg.BGImagesDir,      "images/bg")
-	appCfg.widgetImagesDir = resolve(cfg.WidgetImagesDir,  "widget-images")
-	appCfg.faviconDir      = filepath.Join(*dataDir, "images", "favicons")
-	appCfg.staticDir       = *staticDir
+	appCfg.profileDir = resolve(cfg.ProfileImagesDir, "images/profile")
+	appCfg.bgDir = resolve(cfg.BGImagesDir, "images/bg")
+	appCfg.widgetImagesDir = resolve(cfg.WidgetImagesDir, "images/widget")
+	appCfg.faviconDir = filepath.Join(*dataDir, "images", "favicons")
+	appCfg.staticDir = *staticDir
 
 	for _, d := range []string{
 		appCfg.profileDir, appCfg.bgDir,
@@ -117,14 +117,14 @@ func main() {
 
 	mux := http.NewServeMux()
 
-	mux.HandleFunc("GET /api/data",             handleGetData)
-	mux.HandleFunc("POST /api/data",            handlePostData)
-	mux.HandleFunc("GET /api/stats",            handleStats)
+	mux.HandleFunc("GET /api/data", handleGetData)
+	mux.HandleFunc("POST /api/data", handlePostData)
+	mux.HandleFunc("GET /api/stats", handleStats)
 	mux.HandleFunc("GET /api/bookmarks/search", handleSearchBookmarks)
-	mux.HandleFunc("GET /api/weather",          handleWeather)
-	mux.HandleFunc("GET /api/quotes",           handleGetQuotes)
-	mux.HandleFunc("POST /api/quotes",          handleAddQuote)
-	mux.HandleFunc("DELETE /api/quotes/{id}",   handleDeleteQuote)
+	mux.HandleFunc("GET /api/weather", handleWeather)
+	mux.HandleFunc("GET /api/quotes", handleGetQuotes)
+	mux.HandleFunc("POST /api/quotes", handleAddQuote)
+	mux.HandleFunc("DELETE /api/quotes/{id}", handleDeleteQuote)
 
 	mux.HandleFunc("GET /api/widget-images/next", handleWidgetImageNext)
 	mux.Handle("GET /api/widget-images/files/",
@@ -250,7 +250,7 @@ func serveIndex(w http.ResponseWriter, r *http.Request) {
 	} else if fj, ok := fontJpMap[cfg.FontJP]; ok {
 		fontPixel = "'DotGothic16', " + fj
 	}
-	fontDoto  := fontClockMap[cfg.FontClock]
+	fontDoto := fontClockMap[cfg.FontClock]
 	fontClass := "font-" + cfg.FontClock
 
 	clockClass := ""
@@ -347,8 +347,8 @@ func serveIndex(w http.ResponseWriter, r *http.Request) {
 
 	// JS seed — only mutable user data.
 	rawBookmarks, _ := getBookmarks()
-	rawQuick, _     := getQuickAccess()
-	rawRecent, _    := getRecent()
+	rawQuick, _ := getQuickAccess()
+	rawRecent, _ := getRecent()
 	initialData := map[string]interface{}{
 		"nt_bookmarks":     rawBookmarks,
 		"nt_quick":         rawQuick,

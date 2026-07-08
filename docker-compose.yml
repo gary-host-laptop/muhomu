@@ -1,19 +1,12 @@
 services:
-  mutabu:
+  muhomu:
     build: .
     ports:
       - "4444:4444"
     volumes:
-      - mutabu-data:/data
-      - ./config.yaml:/data/config.yaml:z
-      - ./widget-images:/data/widget-images:z
-      - ./profile-images:/data/images/profile:z
-      - ./bg-images:/data/images/bg:z
+      - ./data:/data:z
     restart: unless-stopped
     environment:
       - PORT=4444
       - DATA_DIR=/data
       - STATIC_DIR=/app/static
-
-volumes:
-  mutabu-data:
