@@ -66,20 +66,12 @@
 
             <!-- ── MAIN GRID ───────────────────────────────────────── -->
             <div class="grid">
-                <!-- LEFT COL -->
-                <div id="col-left" style="display:flex;flex-direction:column;gap:14px">
-                    {{range .ColLeft}}{{widgetHTML $.Widgets .ID}}{{end}}
+                {{range .Columns}}
+                <div class="col col-{{.Size}}">
+                    {{range .Widgets}}{{widgetHTML $.Widgets .ID}}{{end}}
                 </div>
-
-                <!-- CENTER COL -->
-                <div id="col-center" class="center-col">
-                    {{range .ColCenter}}{{widgetHTML $.Widgets .ID}}{{end}}
-                </div>
-
-                <!-- RIGHT COL -->
-                <div id="col-right" style="display:flex;flex-direction:column;gap:14px">
-                    {{range .ColRight}}{{widgetHTML $.Widgets .ID}}{{end}}
-                </div>
+                {{end}}
+            </div>
             </div>
             <!-- /grid -->
 

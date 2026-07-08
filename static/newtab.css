@@ -14,7 +14,7 @@ body {
     background: var(--bg);
     color: var(--white);
     font-family: var(--font-pixel);
-    font-size: 13px;
+    font-size: 14px; /* was 13px */
     overflow-x: hidden;
 }
 
@@ -79,7 +79,7 @@ a:hover {
 .page {
     position: relative;
     z-index: 3;
-    max-width: 1100px;
+    max-width: 1400px; /* was 1100px */
     margin: 0 auto;
     padding: 24px 20px 40px;
     display: grid;
@@ -155,7 +155,7 @@ a:hover {
 }
 
 #clock {
-    font-size: 90px;
+    font-size: 100px; /* was 90px */
     font-weight: 900;
     color: var(--white);
     letter-spacing: 4px;
@@ -169,12 +169,15 @@ a:hover {
 
 body.font-orbitron #clock {
     font-family: "Orbitron", monospace;
+    font-size: 82px; /* was 73px */
 }
 body.font-medodica #clock {
     font-family: "Medodica", monospace;
+    font-size: 116px; /* was 105px */
 }
 body.font-oxanium #clock {
     font-family: "Oxanium", monospace;
+    font-size: 80px; /* was 71px */
 }
 
 /* Clock color mode overrides */
@@ -190,24 +193,24 @@ body.font-oxanium #clock {
 
 /* Clock: fill 52px fixed container */
 body.font-medodica #clock {
-    font-size: 105px;
+    font-size: 116px;
 }
 body.font-orbitron #clock {
-    font-size: 73px;
+    font-size: 82px;
 }
 body.font-oxanium #clock {
-    font-size: 71px;
+    font-size: 80px;
 }
 
 /* Timer display: fill 60px fixed container */
 body.font-medodica .timer-display {
-    font-size: 55px;
+    font-size: 62px; /* was 55px */
 }
 body.font-orbitron .timer-display {
-    font-size: 42px;
+    font-size: 48px; /* was 42px */
 }
 body.font-oxanium .timer-display {
-    font-size: 41px;
+    font-size: 47px; /* was 41px */
 }
 
 /* Timer inputs: height fixed at 28px, font-size is visual only */
@@ -270,7 +273,7 @@ body.font-oxanium .timer-sep {
 
 .bin-sep {
     font-family: var(--font-doto);
-    font-size: 20px;
+    font-size: 24px; /* was 20px */
     color: var(--dimmer);
     line-height: 1;
     align-self: flex-end;
@@ -279,7 +282,7 @@ body.font-oxanium .timer-sep {
 
 #date {
     font-family: var(--font-pixel);
-    font-size: 11px;
+    font-size: 13px; /* was 11px */
     color: var(--dim);
     margin-top: 4px;
     letter-spacing: 2px;
@@ -421,7 +424,7 @@ body.theme-light .tile-edit:hover {
     border: 1px solid var(--border);
     color: var(--white);
     font-family: var(--font-pixel);
-    font-size: 13px;
+    font-size: 15px; /* was 13px */
     padding: 10px 14px 10px 30px;
     outline: none;
     clip-path: polygon(
@@ -453,7 +456,7 @@ body.theme-light .tile-edit:hover {
     border: 1px solid var(--border);
     color: var(--dim);
     font-family: var(--font-pixel);
-    font-size: 10px;
+    font-size: 12px; /* was 10px */
     padding: 3px 8px;
     cursor: pointer;
     letter-spacing: 1px;
@@ -494,17 +497,28 @@ body.theme-light .tile-edit:hover {
 
 /* ─── MAIN GRID ─────────────────────────────────────── */
 .grid {
-    display: grid;
-    grid-template-columns: 220px 1fr 200px;
+    display: flex;
+    flex-direction: row;
     gap: 14px;
     align-items: start;
+    width: 100%;
 }
 
-/* ─── CENTER COL ────────────────────────────────────── */
-.center-col {
+/* ─── COLUMN TYPES ──────────────────────────────────── */
+.col {
     display: flex;
     flex-direction: column;
     gap: 14px;
+    min-width: 0;
+}
+
+.col-small {
+    width: 250px;
+    flex-shrink: 0;
+}
+
+.col-full {
+    flex: 1;
     min-width: 0;
     overflow: visible;
 }
@@ -527,16 +541,18 @@ body.theme-light .tile-edit:hover {
     );
 }
 
+/* .widget::before removed as requested */
+
 /* ─── WIDGET TITLE ──────────────────────────────────── */
 .widget-title {
     display: flex;
     align-items: center;
     gap: 0;
-    font-size: 11px;
+    font-size: 13px; /* was 11px */
     letter-spacing: 2px;
     text-transform: uppercase;
     padding: 0;
-    min-height: 32px;
+    min-height: 36px; /* was 32px */
     border-bottom: 1px solid var(--border);
     background: var(--titlebar);
     position: relative;
@@ -693,7 +709,7 @@ summary.folder-head {
     padding: 7px 10px;
     cursor: pointer;
     list-style: none;
-    font-size: 11px;
+    font-size: 13px; /* was 11px */
     letter-spacing: 1px;
     text-transform: uppercase;
     color: var(--dim);
@@ -767,7 +783,7 @@ a.fav-tile {
     gap: 6px;
     padding: 10px 6px 8px;
     color: var(--dim);
-    font-size: 10px;
+    font-size: 12px; /* was 10px */
     letter-spacing: 0.5px;
     text-align: center;
     background: var(--panel2);
@@ -802,7 +818,7 @@ a.fav-tile img.fav {
     border: 1px solid var(--border-lt);
     color: var(--dim);
     font-family: var(--font-pixel);
-    font-size: 14px;
+    font-size: 16px; /* was 14px */
     font-weight: 400;
     text-transform: uppercase;
     user-select: none;
@@ -898,7 +914,7 @@ body.edit-mode .folder-head-btns {
     padding: 6px 8px;
     color: var(--dim);
     border-left: 2px solid transparent;
-    font-size: 12px;
+    font-size: 14px; /* was 12px */
     transition:
         color 0.1s,
         border-color 0.1s,
@@ -953,7 +969,7 @@ body.edit-mode .qa-btn-group {
     border: none;
     color: var(--dim);
     font-family: var(--font-pixel);
-    font-size: 12px;
+    font-size: 14px; /* was 12px */
     resize: vertical;
     outline: none;
     line-height: 1.7;
@@ -974,7 +990,7 @@ body.edit-mode .qa-btn-group {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    font-size: 11px;
+    font-size: 13px; /* was 11px */
     padding: 4px 0;
     border-bottom: 1px solid var(--border);
 }
@@ -1006,7 +1022,7 @@ body.edit-mode .qa-btn-group {
     background: var(--panel2);
     border: 1px solid var(--border);
     padding: 8px;
-    font-size: 11px;
+    font-size: 13px; /* was 11px */
     color: var(--dim);
     clip-path: polygon(
         0 0,
@@ -1033,13 +1049,13 @@ body.edit-mode .qa-btn-group {
 
 .recent-tile .rt-name {
     color: var(--white);
-    font-size: 12px;
+    font-size: 14px; /* was 12px */
     margin-bottom: 2px;
 }
 
 .recent-tile .rt-url {
     color: var(--dimmer);
-    font-size: 10px;
+    font-size: 12px; /* was 10px */
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -1131,7 +1147,7 @@ body.edit-mode .qa-btn-group {
 }
 
 .quote-block p {
-    font-size: 11px;
+    font-size: 13px; /* was 11px */
     color: var(--dim);
     line-height: 1.8;
     font-style: italic;
@@ -1139,7 +1155,7 @@ body.edit-mode .qa-btn-group {
 
 .quote-block footer {
     margin-top: 6px;
-    font-size: 10px;
+    font-size: 12px; /* was 10px */
     color: var(--dimmer);
     letter-spacing: 1px;
 }
@@ -1151,7 +1167,7 @@ body.edit-mode .qa-btn-group {
 /* ─── TIMER ─────────────────────────────────────────── */
 .timer-display {
     font-family: var(--font-doto);
-    font-size: 42px;
+    font-size: 48px; /* was 42px */
     font-weight: 700;
     text-align: center;
     letter-spacing: 4px;
@@ -1342,7 +1358,7 @@ body.edit-mode .qa-btn-group {
 
 .kanji-char {
     font-family: var(--font-pixel);
-    font-size: 64px;
+    font-size: 72px; /* was 64px */
     line-height: 1;
     color: var(--white);
     letter-spacing: -2px;
@@ -1356,7 +1372,7 @@ body.edit-mode .qa-btn-group {
 
 .kanji-reading {
     font-family: var(--font-pixel);
-    font-size: 17px;
+    font-size: 19px; /* was 17px */
     font-weight: bold;
     color: var(--accent2);
     letter-spacing: 3px;
@@ -1400,7 +1416,7 @@ body.edit-mode .qa-btn-group {
 
 .kanji-meaning {
     font-family: var(--font-pixel);
-    font-size: 14px;
+    font-size: 16px; /* was 14px */
     font-weight: bold;
     color: var(--dim);
     letter-spacing: 1px;
@@ -1733,12 +1749,8 @@ td.today {
     min-width: 1.2em;
 }
 
-.month-box-col1 {
-    min-width: 2.8em;
-}
-.month-box-col2 {
-    min-width: 1.8em;
-}
+.month-box-col1 { min-width: 2.8em; }
+.month-box-col2 { min-width: 1.8em; }
 .month-box-top {
     border-top: 1px solid var(--border);
     border-left: 1px solid var(--border);

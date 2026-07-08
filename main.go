@@ -186,38 +186,41 @@ func serveIndex(w http.ResponseWriter, r *http.Request) {
 
 	widgetMap := make(map[string]template.HTML)
 	var widgetScripts strings.Builder
-	for _, wCfg := range cfg.Widgets {
-		widget, ok := registry[wCfg.ID]
-		if !ok {
-			log.Printf("serveIndex: unknown widget %q in config — skipping", wCfg.ID)
-			continue
-		}
-		html, err := widget.Render(ctx)
-		if err != nil {
-			log.Printf("serveIndex: widget %q render error: %v", wCfg.ID, err)
-			continue
-		}
-		widgetMap[wCfg.ID] = html
-		if s, ok := widget.(widgets.Scriptable); ok {
-			widgetScripts.WriteString("\n/* " + wCfg.ID + " */\n")
-			widgetScripts.WriteString(s.Script())
-			widgetScripts.WriteString("\n")
+	for _, col := range cfg.Columns {
+		for _, wCfg := range col.Widgets {
+			widget, ok := registry[wCfg.ID]
+			if !ok {
+				log.Printf("serveIndex: unknown widget %q in config — skipping", wCfg.ID)
+				continue
+			}
+			html, err := widget.Render(ctx)
+			if err != nil {
+				log.Printf("serveIndex: widget %q render error: %v", wCfg.ID, err)
+				continue
+			}
+			widgetMap[wCfg.ID] = html
+			if s, ok := widget.(widgets.Scriptable); ok {
+				widgetScripts.WriteString("\n/* " + wCfg.ID + " */\n")
+				widgetScripts.WriteString(s.Script())
+				widgetScripts.WriteString("\n")
+			}
 		}
 	}
 
-	// Column layout from config.
-	colLeft, colCenter, colRight := activeWidgets()
-
-	type colWidget struct {
-		ID    string
-		Order int
+	// Columns are passed directly to the template as typed structs.
+	// The template iterates columns and renders each widget in declaration order.
+	type tmplWidget struct{ ID string }
+	type tmplColumn struct {
+		Size    string
+		Widgets []tmplWidget
 	}
-	toTmpl := func(ws []WidgetConfig) []colWidget {
-		out := make([]colWidget, len(ws))
-		for i, w := range ws {
-			out[i] = colWidget{ID: w.ID, Order: w.Order}
+	var tmplCols []tmplColumn
+	for _, col := range cfg.Columns {
+		tc := tmplColumn{Size: col.Size}
+		for _, w := range col.Widgets {
+			tc.Widgets = append(tc.Widgets, tmplWidget{ID: w.ID})
 		}
-		return out
+		tmplCols = append(tmplCols, tc)
 	}
 
 	// Fonts.
@@ -367,9 +370,7 @@ func serveIndex(w http.ResponseWriter, r *http.Request) {
 		TitleLang         string
 		SearchEnginesHTML template.HTML
 		Widgets           map[string]template.HTML
-		ColLeft           []colWidget
-		ColCenter         []colWidget
-		ColRight          []colWidget
+		Columns           []tmplColumn
 		InitialData       template.JS
 		WidgetScripts     template.JS
 	}{
@@ -387,9 +388,7 @@ func serveIndex(w http.ResponseWriter, r *http.Request) {
 		TitleLang:         cfg.TitleLang,
 		SearchEnginesHTML: template.HTML(enginesHTML.String()),
 		Widgets:           widgetMap,
-		ColLeft:           toTmpl(colLeft),
-		ColCenter:         toTmpl(colCenter),
-		ColRight:          toTmpl(colRight),
+		Columns:           tmplCols,
 		InitialData:       template.JS(jsonInitial),
 		WidgetScripts:     template.JS(widgetScripts.String()),
 	}
