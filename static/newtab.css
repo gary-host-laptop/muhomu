@@ -1336,6 +1336,67 @@ body.edit-mode .qa-btn-group {
     background: var(--accent);
 }
 
+/* ─── WEATHER WIDGET ────────────────────────────────── */
+.weather-block {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    padding: 14px 10px;
+    text-align: center;
+}
+
+.weather-temp {
+    font-family: var(--font-doto);
+    font-size: 40px;
+    font-weight: 700;
+    color: var(--white);
+    line-height: 1;
+    letter-spacing: 2px;
+}
+
+.weather-condition {
+    font-size: 13px;
+    font-weight: bold;
+    color: var(--dim);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    margin-top: 6px;
+}
+
+.weather-feels {
+    font-size: 11px;
+    color: var(--dimmer);
+    letter-spacing: 0.5px;
+}
+
+.weather-hilo {
+    font-size: 12px;
+    color: var(--accent);
+    letter-spacing: 1px;
+    margin-top: 4px;
+}
+
+.weather-city {
+    font-size: 10px;
+    color: var(--dimmer);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-top: 6px;
+    border-top: 1px solid var(--border);
+    padding-top: 6px;
+    width: 100%;
+}
+
+.weather-empty {
+    font-size: 11px;
+    color: var(--dimmer);
+    text-align: center;
+    padding: 20px 10px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+}
+
 /* ─── KANJI WIDGET ──────────────────────────────────── */
 .kanji-block {
     display: flex;
@@ -1529,11 +1590,19 @@ body.edit-mode .fav-tile.drag-over {
     font-family: monospace;
     font-size: 11px;
     text-align: center;
-    padding: 12px 0 8px;
+    padding: 0;
     box-sizing: border-box;
     color: var(--dim);
     position: relative;
     z-index: 4;
+    border-top: 1px solid var(--border);
+    margin-top: 40px;
+}
+
+.footer-inner {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 12px 20px 8px;
 }
 
 .footer-gh {

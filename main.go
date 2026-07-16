@@ -233,6 +233,9 @@ func serveIndex(w http.ResponseWriter, r *http.Request) {
 		WidgetImageDir: appCfg.widgetImagesDir,
 		JLPTLevel:      cfg.JLPTLevel,
 		TitleLang:      cfg.TitleLang,
+		LocationCity:   cfg.Location.City,
+		LocationLat:    cfg.Location.Lat,
+		LocationLon:    cfg.Location.Lon,
 	}
 
 	// ── Render widgets and collect HTML ──

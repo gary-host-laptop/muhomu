@@ -26,6 +26,9 @@ type RenderContext struct {
 	WidgetImageDir string
 	JLPTLevel      string
 	TitleLang      string
+	LocationCity   string
+	LocationLat    string
+	LocationLon    string
 	Options        map[string]interface{}
 }
 
@@ -64,6 +67,7 @@ func Registry() map[string]Widget {
 		&ImageWidget{},
 		&TimerWidget{},
 		&RainWidget{},
+		&WeatherWidget{},
 		&CalendarWidget{},
 		&SplitColumnWidget{},
 	}
