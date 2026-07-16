@@ -388,7 +388,6 @@ tick();
 let activeEngine = null;
 (function () {
   const d = window.__INITIAL_DATA__ || {};
-  const searchTarget = d.nt_search_target || "_blank";
   const bar = document.querySelector(".search-engines");
   if (bar) {
     bar.querySelectorAll(".engine-btn").forEach((btn) => {
@@ -409,7 +408,7 @@ let activeEngine = null;
         const q = e.target.value.trim();
         if (!q) return;
         const url = (activeEngine?.dataset?.url || "https://duckduckgo.com/?q=") + encodeURIComponent(q);
-        window.open(url, searchTarget);
+        window.location.href = url;
         e.target.value = "";
       }
     });
@@ -432,6 +431,43 @@ window.addEventListener("load", () => {
   el.focus();
   setTimeout(() => el.focus(), 100);
 });
+
+/* ── FOOTER LIVE STATS ───────────────────────────────────────────
+   Updates network speeds and system stats from /api/stats every 2s. */
+(function() {
+  const rxEl = document.getElementById("fi-rx");
+  const txEl = document.getElementById("fi-tx");
+  const cpuEl = document.getElementById("fi-cpu");
+  const ramEl = document.getElementById("fi-ram");
+  if (!rxEl && !txEl && !cpuEl && !ramEl) return;
+
+  function fmtSpeed(kbps) {
+    if (kbps >= 1024) return (kbps / 1024).toFixed(1) + " MB/s";
+    return kbps.toFixed(1) + " KB/s";
+  }
+
+  function updateFooter() {
+    fetch("/api/stats")
+      .then(function(r) { return r.json(); })
+      .then(function(d) {
+        if (rxEl) rxEl.textContent = "⬇ " + fmtSpeed(d.rx || 0);
+        if (txEl) txEl.textContent = "⬆ " + fmtSpeed(d.tx || 0);
+        if (cpuEl) cpuEl.textContent = "◉ cpu " + (d.cpu || 0).toFixed(1) + "%";
+        if (ramEl) ramEl.textContent = "◉ ram " + (d.ram || 0).toFixed(0) + "%";
+      })
+      .catch(function() {});
+  }
+
+  // Set initial values from server-rendered data if available
+  var initData = window.__INITIAL_DATA__ || {};
+  if (initData.nt_rx !== undefined && rxEl) rxEl.textContent = "⬇ " + fmtSpeed(initData.nt_rx);
+  if (initData.nt_tx !== undefined && txEl) txEl.textContent = "⬆ " + fmtSpeed(initData.nt_tx);
+  if (initData.nt_cpu !== undefined && cpuEl) cpuEl.textContent = "◉ cpu " + (initData.nt_cpu || 0).toFixed(1) + "%";
+  if (initData.nt_ram !== undefined && ramEl) ramEl.textContent = "◉ ram " + (initData.nt_ram || 0).toFixed(0) + "%";
+
+  // Live update every 2 seconds
+  setInterval(updateFooter, 2000);
+})();
 
 /* ── PROFILE TAGLINE ─────────────────────────────────────────── */
 (function () {

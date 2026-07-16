@@ -29,10 +29,13 @@ type AppConfig struct {
 
 	SearchEngines []SearchEngine `yaml:"search_engines"`
 	JLPTLevel     string         `yaml:"jlpt_level"`
+	FooterItems   []string       `yaml:"footer_items"`
 
 	ProfileImagesDir string `yaml:"profile_images_dir"`
 	BGImagesDir      string `yaml:"bg_images_dir"`
 	WidgetImagesDir  string `yaml:"widget_images_dir"`
+	ThemesDir        string `yaml:"themes_dir"`
+	ThemeFile        string `yaml:"theme_file"`
 
 	// Columns is the authoritative declaration of layout.
 	// Each column declares its size and the ordered list of widgets
@@ -82,7 +85,7 @@ func defaultConfig() AppConfig {
 		BGBlur:       true,
 		UILang:       "en",
 		TitleLang:    "ja",
-		SearchTarget: "_blank",
+		SearchTarget: "_self",
 		JLPTLevel:    "all",
 		SearchEngines: []SearchEngine{
 			{Name: "duckduckgo", URL: "https://duckduckgo.com/?q=", Default: true},

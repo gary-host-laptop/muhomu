@@ -30,7 +30,7 @@ func (w *KotobaWidget) Render(ctx RenderContext) (template.HTML, error) {
 	inner := fmt.Sprintf(`
 <div class="kanji-block">
   <div class="kanji-char" id="kanji-char">
-    <a href="https://jisho.org/search/%s%%20%%23kanji" target="_blank"
+    <a href="https://jisho.org/search/%s%%20%%23kanji"
        style="color:inherit;text-decoration:none;">%s</a>
   </div>
   <div class="kanji-reading" id="kanji-reading">%s</div>
@@ -53,7 +53,7 @@ func (w *KotobaWidget) Script() string {
     charEl.innerHTML="";
     const a=document.createElement("a");
     a.href="https://jisho.org/search/"+encodeURIComponent(w.k)+"%20%23kanji";
-    a.target="_blank";a.style.cssText="color:inherit;text-decoration:none;";a.textContent=w.k;
+    a.style.cssText="color:inherit;text-decoration:none;";a.textContent=w.k;
     charEl.appendChild(a);
     const r=document.getElementById("kanji-reading");if(r)r.textContent=w.r;
     const m=document.getElementById("kanji-meaning");if(m)m.textContent=w.m;

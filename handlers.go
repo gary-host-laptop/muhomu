@@ -59,6 +59,45 @@ var (
 	prevIdle, prevTotal  uint64
 )
 
+type statsPoint struct {
+	CPU float64 `json:"cpu"`
+	RAM float64 `json:"ram"`
+}
+
+var (
+	statsMu      sync.RWMutex
+	statsCurrent struct {
+		cpu, ram, rx, tx float64
+	}
+	statsHistory []statsPoint
+	statsMax     = 30
+)
+
+// startStatsCollector launches a background goroutine that polls
+// /proc files every 2 seconds and keeps a ring buffer of history.
+func startStatsCollector() {
+	go func() {
+		for {
+			cpu := getCPUPercent()
+			ram := getRAMPercent()
+			rx, tx := getNetSpeeds()
+
+			statsMu.Lock()
+			statsCurrent.cpu = cpu
+			statsCurrent.ram = ram
+			statsCurrent.rx = rx
+			statsCurrent.tx = tx
+			statsHistory = append(statsHistory, statsPoint{CPU: cpu, RAM: ram})
+			if len(statsHistory) > statsMax {
+				statsHistory = statsHistory[len(statsHistory)-statsMax:]
+			}
+			statsMu.Unlock()
+
+			time.Sleep(2 * time.Second)
+		}
+	}()
+}
+
 func getCPUPercent() float64 {
 	f, _ := os.Open("/proc/stat")
 	defer f.Close()
@@ -139,10 +178,19 @@ func getNetSpeeds() (rx, tx float64) {
 }
 
 func handleStats(w http.ResponseWriter, r *http.Request) {
-	cpu := getCPUPercent()
-	ram := getRAMPercent()
-	rx, tx := getNetSpeeds()
-	jsonOK(w, map[string]interface{}{"cpu": cpu, "ram": ram, "rx": rx, "tx": tx})
+	statsMu.RLock()
+	cpu := statsCurrent.cpu
+	ram := statsCurrent.ram
+	rx := statsCurrent.rx
+	tx := statsCurrent.tx
+	history := make([]statsPoint, len(statsHistory))
+	copy(history, statsHistory)
+	statsMu.RUnlock()
+
+	jsonOK(w, map[string]interface{}{
+		"cpu": cpu, "ram": ram, "rx": rx, "tx": tx,
+		"history": history,
+	})
 }
 
 func jsonOK(w http.ResponseWriter, data interface{}) {

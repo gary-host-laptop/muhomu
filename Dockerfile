@@ -19,7 +19,7 @@ COPY --from=builder /build/muhomu .
 COPY static/ ./static/
 COPY templates/ ./templates/
 
-RUN mkdir -p /data/images/profile /data/images/bg /data/images/favicons /data/widget-images
+RUN mkdir -p /data/images/profile /data/images/bg /data/images/favicons /data/widget-images /data/themes
 
 EXPOSE 4444
 

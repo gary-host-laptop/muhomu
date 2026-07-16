@@ -26,7 +26,7 @@ func (w *QuickAccessWidget) Render(ctx RenderContext) (template.HTML, error) {
 	for i, item := range items {
 		fav := item.Favicon
 		fmt.Fprintf(&sb,
-			`<a href="%s" target="_blank" draggable="true" data-drag-index="%d">
+			`<a href="%s" draggable="true" data-drag-index="%d">
   <img class="ql-fav" src="%s" alt="">
   %s
   <span class="qa-btn-group"><button class="qa-edit"><i class="ph-light ph-pencil-simple"></i></button></span>
@@ -48,7 +48,7 @@ func (w *QuickAccessWidget) Script() string {
     if(!container)return;
     container.innerHTML="";
     _data.forEach((item,i)=>{
-      const a=document.createElement("a");a.href=item.url;a.target="_blank";a.draggable=true;a.dataset.dragIndex=i;
+      const a=document.createElement("a");a.href=item.url;a.draggable=true;a.dataset.dragIndex=i;
       const img=document.createElement("img");img.className="ql-fav";img.src=item.favicon||item.fav||guessFavicon(item.url);img.alt="";
       a.appendChild(img);a.appendChild(document.createTextNode(" "+item.label));
       const grp=document.createElement("span");grp.style.cssText="margin-left:auto;display:none;align-items:center;gap:0;flex-shrink:0;";grp.className="qa-btn-group";

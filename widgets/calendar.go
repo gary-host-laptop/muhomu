@@ -47,7 +47,7 @@ func (w *CalendarWidget) Render(ctx RenderContext) (template.HTML, error) {
 </tr>
 <tr>
   <td class="connector-col1"></td>
-  <td colspan="2" class="cal-header-year" style="text-align:center;border-bottom:1px solid var(--border);">%s</td>
+  <td colspan="2" class="cal-header-year cal-header-today" style="text-align:center;border-bottom:1px solid var(--border);">%s</td>
   <td class="connector-col4"></td>
 </tr>`, monthNames[month-1])
 

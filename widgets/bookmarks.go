@@ -40,7 +40,7 @@ func renderBookmarks(folders []BookmarkFolder) template.HTML {
 				fav = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='32'%3E%3Crect width='32' height='32' fill='%23333'/%3E%3C/svg%3E"
 			}
 			fmt.Fprintf(&sb,
-				`<a href="%s" target="_blank" class="fav-tile" draggable="true" data-drag-index="%d">
+				`<a href="%s" class="fav-tile" draggable="true" data-drag-index="%d">
   <img class="fav" src="%s" alt="">
   <span>%s</span>
   <button class="tile-edit"><i class="ph-light ph-pencil-simple"></i></button>
@@ -84,7 +84,7 @@ func (w *BookmarksWidget) Script() string {
       hbtns.appendChild(editBtn);hbtns.appendChild(addBtn);summary.appendChild(hbtns);details.appendChild(summary);
       const linksDiv=document.createElement("div");linksDiv.className="folder-links grid";
       folder.links.forEach((link,li)=>{
-        const a=document.createElement("a");a.href=link.url;a.target="_blank";a.className="fav-tile";a.draggable=true;a.dataset.dragIndex=li;
+        const a=document.createElement("a");a.href=link.url;a.className="fav-tile";a.draggable=true;a.dataset.dragIndex=li;
         const img=document.createElement("img");img.className="fav";img.src=link.fav||guessFavicon(link.url);img.alt="";
         img.addEventListener("error",()=>{const l=document.createElement("div");l.className="fav-letter";l.textContent=(link.label||"?")[0];img.replaceWith(l);});
         const lbl=document.createElement("span");lbl.textContent=link.label;

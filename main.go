@@ -75,6 +75,7 @@ var appCfg struct {
 	profileDir      string
 	bgDir           string
 	widgetImagesDir string
+	themesDir       string
 	staticDir       string
 }
 
@@ -98,11 +99,13 @@ func main() {
 	appCfg.bgDir = resolve(cfg.BGImagesDir, "images/bg")
 	appCfg.widgetImagesDir = resolve(cfg.WidgetImagesDir, "images/widget")
 	appCfg.faviconDir = filepath.Join(*dataDir, "images", "favicons")
+	appCfg.themesDir = resolve(cfg.ThemesDir, "themes")
 	appCfg.staticDir = *staticDir
 
 	for _, d := range []string{
 		appCfg.profileDir, appCfg.bgDir,
 		appCfg.widgetImagesDir, appCfg.faviconDir,
+		appCfg.themesDir,
 	} {
 		os.MkdirAll(d, 0755)
 	}
@@ -114,6 +117,7 @@ func main() {
 	defer db.Close()
 
 	go migrateFavicons(appCfg.faviconDir)
+	startStatsCollector()
 
 	mux := http.NewServeMux()
 
@@ -140,6 +144,10 @@ func main() {
 	mux.Handle("GET /api/images/favicons/",
 		http.StripPrefix("/api/images/favicons/",
 			http.FileServer(http.Dir(appCfg.faviconDir))))
+
+	mux.Handle("GET /api/themes/",
+		http.StripPrefix("/api/themes/",
+			http.FileServer(http.Dir(appCfg.themesDir))))
 
 	fs := http.FileServer(http.Dir(*staticDir))
 	mux.Handle("/static/", http.StripPrefix("/static/", setContentType(fs)))
@@ -347,6 +355,31 @@ func serveIndex(w http.ResponseWriter, r *http.Request) {
 		bgHTML = template.HTML(`<div id="bg"` + cls + `><img src="` + bgImageURL + `" alt=""></div>`)
 	}
 
+	// ── Footer items ──
+	var footerHTML strings.Builder
+	footerItems := cfg.FooterItems
+	for i, item := range footerItems {
+		if i > 0 {
+			footerHTML.WriteString(`<span class="fi-sep">·</span>`)
+		}
+		switch item {
+		case "rx":
+			footerHTML.WriteString(`<span class="fi-item fi-rx" id="fi-rx">⬇ 0.0 KB/s</span>`)
+		case "tx":
+			footerHTML.WriteString(`<span class="fi-item fi-tx" id="fi-tx">⬆ 0.0 KB/s</span>`)
+		case "cpu":
+			footerHTML.WriteString(`<span class="fi-item fi-cpu" id="fi-cpu">◉ cpu 0%</span>`)
+		case "ram":
+			footerHTML.WriteString(`<span class="fi-item fi-ram" id="fi-ram">◉ ram 0%</span>`)
+		case "version":
+			// spacer before version pushes it to the right
+			if i > 0 {
+				footerHTML.WriteString(`<span class="fi-spacer"></span>`)
+			}
+			footerHTML.WriteString(`<span class="fi-version">v1.1.1</span>`)
+		}
+	}
+
 	// ── Profile image ──
 	profImageURL := pickImage(appCfg.profileDir, "/api/images/profile/", rng)
 
@@ -420,6 +453,25 @@ func serveIndex(w http.ResponseWriter, r *http.Request) {
 		fontStyle = template.CSS("body.theme-" + cfg.Theme + "{" + strings.Join(fontParts, ";") + "}")
 	}
 
+	// ── Theme CSS — load the file declared in config ──
+	var themeCSSLinks strings.Builder
+	if cfg.ThemeFile != "" {
+		// Verify the file exists before linking
+		if _, err := os.Stat(filepath.Join(appCfg.themesDir, cfg.ThemeFile)); err == nil {
+			themeCSSLinks.WriteString(fmt.Sprintf(`<link rel="stylesheet" href="/api/themes/%s">`+"\n", cfg.ThemeFile))
+		} else {
+			log.Printf("serveIndex: theme_file %q not found in %s", cfg.ThemeFile, appCfg.themesDir)
+		}
+	}
+
+	// ── Initial stats for footer ──
+	statsMu.RLock()
+	initCPU := statsCurrent.cpu
+	initRAM := statsCurrent.ram
+	initRX := statsCurrent.rx
+	initTX := statsCurrent.tx
+	statsMu.RUnlock()
+
 	// ── JS seed ──
 	rawBookmarks, _ := getBookmarks()
 	rawQuick, _ := getQuickAccess()
@@ -430,6 +482,10 @@ func serveIndex(w http.ResponseWriter, r *http.Request) {
 		"nt_recent":        rawRecent,
 		"nt_location":      map[string]string{"city": cfg.Location.City, "lat": cfg.Location.Lat, "lon": cfg.Location.Lon},
 		"nt_search_target": cfg.SearchTarget,
+		"nt_cpu":           initCPU,
+		"nt_ram":           initRAM,
+		"nt_rx":            initRX,
+		"nt_tx":            initTX,
 	}
 	jsonInitial, _ := json.Marshal(initialData)
 
@@ -449,6 +505,8 @@ func serveIndex(w http.ResponseWriter, r *http.Request) {
 		GridCols          string
 		InitialData       template.JS
 		WidgetScripts     template.JS
+		ThemeCSSLinks     template.HTML
+		FooterHTML        template.HTML
 	}{
 		BodyClass: strings.TrimSpace("theme-" + cfg.Theme + " " + fontClass + " " + clockClass),
 		BodyData: template.HTMLAttr(fmt.Sprintf(
@@ -468,6 +526,8 @@ func serveIndex(w http.ResponseWriter, r *http.Request) {
 		GridCols:          gridCols,
 		InitialData:       template.JS(jsonInitial),
 		WidgetScripts:     template.JS(widgetScripts),
+		ThemeCSSLinks:     template.HTML(themeCSSLinks.String()),
+		FooterHTML:        template.HTML(footerHTML.String()),
 	}
 
 	tmpl, err := template.New("index.tmpl").Funcs(template.FuncMap{

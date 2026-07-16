@@ -47,7 +47,7 @@ func (w *RecentlyVisitedWidget) Script() string {
       const name=document.createElement("div");name.className="rt-name";name.textContent=item.name;
       const url=document.createElement("div");url.className="rt-url";url.textContent=item.url;
       tile.appendChild(name);tile.appendChild(url);
-      tile.addEventListener("click",()=>window.open(item.url,"_blank"));
+      tile.addEventListener("click",()=>{window.location.href=item.url;});
       const x=document.createElement("button");x.className="recent-x";x.innerHTML='<i class="ph-light ph-x"></i>';
       x.addEventListener("click",async e=>{e.stopPropagation();_data.splice(i,1);await save();load();});
       tile.appendChild(x);grid.appendChild(tile);

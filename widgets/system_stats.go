@@ -62,7 +62,7 @@ func (w *SystemStatsWidget) Script() string {
     ctx.strokeStyle=border;ctx.lineWidth=1;
     ctx.beginPath();ctx.moveTo(0,h/2);ctx.lineTo(w,h/2);ctx.stroke();
   }
-  async function update(){syncSize();const stats=await fetchStats();push(history.cpu,stats?stats.cpu||0:0);push(history.mem,stats?stats.ram||0:0);render(stats);}
-  update();setInterval(update,2000);
+  async function update(isFirst){syncSize();const stats=await fetchStats();if(stats){if(isFirst&&stats.history&&stats.history.length){history.cpu=stats.history.map(p=>p.cpu);history.mem=stats.history.map(p=>p.ram);}else{push(history.cpu,stats.cpu||0);push(history.mem,stats.ram||0);}}render(stats);}
+  update(true);setInterval(()=>update(false),2000);
 })();`
 }
