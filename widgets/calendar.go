@@ -68,9 +68,9 @@ func (w *CalendarWidget) Render(ctx RenderContext) (template.HTML, error) {
 		if leftDay > 0 {
 			todayL := ""
 			if leftDay == today {
-				todayL = ` class="today"`
+				todayL = " today"
 			}
-			fmt.Fprintf(&sb, `<td class="col-left-num"%s>%02d</td><td class="col-left-wk"%s>%s</td>`,
+			fmt.Fprintf(&sb, `<td class="col-left-num%s">%02d</td><td class="col-left-wk%s">%s</td>`,
 				todayL, leftDay, todayL, weekdays[(firstDayMon+leftDay-1)%7])
 		} else {
 			sb.WriteString(`<td class="col-left-num"></td><td class="col-left-wk"></td>`)
@@ -78,9 +78,9 @@ func (w *CalendarWidget) Render(ctx RenderContext) (template.HTML, error) {
 		if rightDay > 0 {
 			todayR := ""
 			if rightDay == today {
-				todayR = ` class="today"`
+				todayR = " today"
 			}
-			fmt.Fprintf(&sb, `<td class="col-right-num"%s>%02d</td><td class="col-right-wk"%s>%s</td>`,
+			fmt.Fprintf(&sb, `<td class="col-right-num%s">%02d</td><td class="col-right-wk%s">%s</td>`,
 				todayR, rightDay, todayR, weekdays[(firstDayMon+rightDay-1)%7])
 		} else {
 			sb.WriteString(`<td class="col-right-num"></td><td class="col-right-wk"></td>`)

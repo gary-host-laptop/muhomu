@@ -1,8 +1,10 @@
-# muhomu
-
-A self-hosted new tab dashboard. Go server, SQLite, YAML config. SSR-first, minimal JS.
+<div align="center">
+  <h1>無ホム · muhomu</h1>
+</div>
 
 ---
+<img src="./screenshot.png" />
+
 
 ### Quick start
 
