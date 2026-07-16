@@ -1589,8 +1589,6 @@ body.edit-mode .fav-tile.drag-over {
     width: 100%;
     font-family: monospace;
     font-size: 11px;
-    text-align: center;
-    padding: 0;
     box-sizing: border-box;
     color: var(--dim);
     position: relative;
@@ -1603,62 +1601,79 @@ body.edit-mode .fav-tile.drag-over {
     max-width: 1400px;
     margin: 0 auto;
     padding: 12px 20px 8px;
+    display: flex;
+    align-items: center;
+    gap: 0;
+    line-height: 1;
 }
 
-.footer-gh {
+.fl-caps {
+    color: var(--dimmer);
+    flex-shrink: 0;
+}
+
+.fl-rail {
+    flex: 1 1 0;
+    min-width: 8px;
+    height: 0;
+    border-top: 1.5px solid var(--dim);
+    margin: 0 4px;
+}
+
+.fl-sep {
+    color: var(--dimmer);
+    margin: 0 1px;
+    flex-shrink: 0;
+}
+
+.fl-icon {
+    flex-shrink: 0;
+    margin: 0 3px;
+}
+
+.fl-label {
     color: var(--dim);
-    text-decoration: none;
-    vertical-align: middle;
-    font-size: 16px;
-}
-.footer-gh:hover {
-    color: var(--accent);
+    letter-spacing: 1px;
+    flex-shrink: 0;
+    margin: 0 3px;
 }
 
-@keyframes dot1 {
+.fl-dots {
+    color: var(--dimmer);
+    flex-shrink: 0;
+    margin: 0 3px;
+}
+
+.fl-version {
+    color: var(--dimmer);
+    flex-shrink: 0;
+    margin: 0 2px;
+}
+
+@keyframes fd1 {
     0%,
-    59% {
-        opacity: 1;
-    }
+    59% { opacity: 1; }
     60%,
-    100% {
-        opacity: 0.15;
-    }
+    100% { opacity: 0.15; }
 }
-@keyframes dot2 {
+@keyframes fd2 {
     0%,
-    19% {
-        opacity: 0.15;
-    }
+    19% { opacity: 0.15; }
     20%,
-    79% {
-        opacity: 1;
-    }
+    79% { opacity: 1; }
     80%,
-    100% {
-        opacity: 0.15;
-    }
+    100% { opacity: 0.15; }
 }
-@keyframes dot3 {
+@keyframes fd3 {
     0%,
-    39% {
-        opacity: 0.15;
-    }
+    39% { opacity: 0.15; }
     40%,
-    100% {
-        opacity: 1;
-    }
+    100% { opacity: 1; }
 }
 
-.footer-dot.dot-1 {
-    animation: dot1 2.5s steps(1) infinite;
-}
-.footer-dot.dot-2 {
-    animation: dot2 2.5s steps(1) infinite;
-}
-.footer-dot.dot-3 {
-    animation: dot3 2.5s steps(1) infinite;
-}
+.fd1 { animation: fd1 2.5s steps(1) infinite; }
+.fd2 { animation: fd2 2.5s steps(1) infinite; }
+.fd3 { animation: fd3 2.5s steps(1) infinite; }
 
 /* ─── RSS WIDGET ─────────────────────────────────────── */
 .rss-list {
