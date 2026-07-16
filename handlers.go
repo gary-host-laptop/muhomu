@@ -57,7 +57,6 @@ var (
 	prevNetRx, prevNetTx uint64
 	prevNetTime          time.Time
 	prevIdle, prevTotal  uint64
-	prevCPUTime          time.Time
 )
 
 func getCPUPercent() float64 {
@@ -78,15 +77,14 @@ func getCPUPercent() float64 {
 	softirq, _ := strconv.ParseUint(parts[7], 10, 64)
 
 	total := user + nice + system + idle + iowait + irq + softirq
-	now := time.Now()
 	if prevTotal == 0 {
-		prevIdle = idle; prevTotal = total; prevCPUTime = now
+		prevIdle = idle; prevTotal = total
 		return 0
 	}
 	deltaTotal := float64(total - prevTotal)
 	deltaIdle  := float64(idle - prevIdle)
 	cpu := 100 * (deltaTotal - deltaIdle) / deltaTotal
-	prevIdle = idle; prevTotal = total; prevCPUTime = now
+	prevIdle = idle; prevTotal = total
 	return cpu
 }
 
@@ -328,13 +326,10 @@ func handleWidgetImageNext(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	current := filepath.Base(r.URL.Query().Get("current"))
-	candidates := files
-	if len(files) > 1 {
-		candidates = candidates[:0]
-		for _, f := range files {
-			if f != current {
-				candidates = append(candidates, f)
-			}
+	candidates := make([]string, 0, len(files))
+	for _, f := range files {
+		if f != current {
+			candidates = append(candidates, f)
 		}
 	}
 	pick := candidates[rand.Intn(len(candidates))]
@@ -395,9 +390,4 @@ func handleDeleteQuote(w http.ResponseWriter, r *http.Request) {
 	jsonOK(w, map[string]string{"ok": "true"})
 }
 
-func min(a, b int) int {
-	if a < b {
-		return a
-	}
-	return b
-}
+

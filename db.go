@@ -3,8 +3,6 @@ package main
 import (
 	"database/sql"
 	"fmt"
-	"log"
-
 	_ "modernc.org/sqlite"
 )
 
@@ -357,8 +355,3 @@ func deleteQuote(id int) error {
 	return err
 }
 
-func logFatal(err error) {
-	if err != nil {
-		log.Fatal(err)
-	}
-}

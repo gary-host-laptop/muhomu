@@ -82,7 +82,7 @@ func main() {
 	port := flag.String("port", "8080", "port to listen on")
 	dataDir := flag.String("data", "./data", "path to data directory")
 	staticDir := flag.String("static", "./static", "path to static files")
-	configPath := flag.String("config", "./config.yaml", "path to config file")
+	configPath := flag.String("config", "./data/config.yaml", "path to config file")
 	flag.Parse()
 
 	cfg = loadConfig(*configPath)
@@ -238,17 +238,23 @@ func serveIndex(w http.ResponseWriter, r *http.Request) {
 	// ── Render widgets and collect HTML ──
 	widgetMap := make(map[string]template.HTML)
 	var allConfigs []WidgetConfig // flat list of top-level widgets for script collection
+	widgetIndex := 0
 
 	for _, col := range cfg.Columns {
 		for _, wCfg := range col.Widgets {
-			allConfigs = append(allConfigs, wCfg) // track top-level configs
+			allConfigs = append(allConfigs, wCfg)
 
 			widget, ok := registry[wCfg.ID]
 			if !ok {
 				log.Printf("serveIndex: unknown widget %q in config — skipping", wCfg.ID)
+				widgetIndex++
 				continue
 			}
-			// pass the widget's options to RenderContext
+			// Use a unique key per instance so duplicate widget types
+			// (e.g., two split-column widgets) don't overwrite each other
+			key := fmt.Sprintf("%s-%d", wCfg.ID, widgetIndex)
+			widgetIndex++
+
 			ctxWithOpts := ctx
 			ctxWithOpts.Options = wCfg.Options
 			html, err := widget.Render(ctxWithOpts)
@@ -256,7 +262,7 @@ func serveIndex(w http.ResponseWriter, r *http.Request) {
 				log.Printf("serveIndex: widget %q render error: %v", wCfg.ID, err)
 				continue
 			}
-			widgetMap[wCfg.ID] = html
+			widgetMap[key] = html
 		}
 	}
 
@@ -264,19 +270,30 @@ func serveIndex(w http.ResponseWriter, r *http.Request) {
 	widgetScripts := collectWidgetScripts(registry, allConfigs, ctx)
 
 	// ── Columns for template ──
-	type tmplWidget struct{ ID string }
+	type tmplWidget struct{ ID, Key string }
 	type tmplColumn struct {
-		Size    string
 		Widgets []tmplWidget
 	}
 	var tmplCols []tmplColumn
+	var gridParts []string
+	widgetIndex = 0
 	for _, col := range cfg.Columns {
-		tc := tmplColumn{Size: col.Size}
+		tc := tmplColumn{}
 		for _, w := range col.Widgets {
-			tc.Widgets = append(tc.Widgets, tmplWidget{ID: w.ID})
+			key := fmt.Sprintf("%s-%d", w.ID, widgetIndex)
+			widgetIndex++
+			tc.Widgets = append(tc.Widgets, tmplWidget{ID: w.ID, Key: key})
 		}
 		tmplCols = append(tmplCols, tc)
+
+		switch col.Size {
+		case "small":
+			gridParts = append(gridParts, "250px")
+		default:
+			gridParts = append(gridParts, "1fr")
+		}
 	}
+	gridCols := strings.Join(gridParts, " ")
 
 	// ── Fonts ──
 	fontLatinMap := map[string]string{
@@ -426,6 +443,7 @@ func serveIndex(w http.ResponseWriter, r *http.Request) {
 		SearchEnginesHTML template.HTML
 		Widgets           map[string]template.HTML
 		Columns           []tmplColumn
+		GridCols          string
 		InitialData       template.JS
 		WidgetScripts     template.JS
 	}{
@@ -444,13 +462,14 @@ func serveIndex(w http.ResponseWriter, r *http.Request) {
 		SearchEnginesHTML: template.HTML(enginesHTML.String()),
 		Widgets:           widgetMap,
 		Columns:           tmplCols,
+		GridCols:          gridCols,
 		InitialData:       template.JS(jsonInitial),
 		WidgetScripts:     template.JS(widgetScripts),
 	}
 
 	tmpl, err := template.New("index.tmpl").Funcs(template.FuncMap{
-		"widgetHTML": func(ws map[string]template.HTML, id string) template.HTML {
-			return ws[id]
+		"widgetHTML": func(ws map[string]template.HTML, key string) template.HTML {
+			return ws[key]
 		},
 	}).ParseFiles("templates/index.tmpl")
 	if err != nil {
@@ -512,11 +531,3 @@ func setContentType(next http.Handler) http.Handler {
 	})
 }
 
-func getString(m map[string]interface{}, key string) string {
-	if v, ok := m[key]; ok {
-		if s, ok := v.(string); ok {
-			return s
-		}
-	}
-	return ""
-}

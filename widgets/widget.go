@@ -56,6 +56,7 @@ func Registry() map[string]Widget {
 		&NotesWidget{},
 		&QuickAccessWidget{},
 		&RecentlyVisitedWidget{},
+		&RSSWidget{},
 		&QuoteWidget{},
 		&KotobaWidget{},
 		&SystemStatsWidget{},

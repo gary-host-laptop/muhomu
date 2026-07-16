@@ -13,8 +13,11 @@ func (w *SplitColumnWidget) Render(ctx RenderContext) (template.HTML, error) {
 	// ── Parse max-columns ──
 	maxCols := 2
 	if v, ok := ctx.Options["max-columns"]; ok {
-		if n, ok := v.(float64); ok {
+		switch n := v.(type) {
+		case float64:
 			maxCols = int(n)
+		case int:
+			maxCols = n
 		}
 	}
 

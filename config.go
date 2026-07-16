@@ -41,6 +41,9 @@ type AppConfig struct {
 	// by which column the widget appears under — no col field needed.
 	// Both Col and Order on individual widgets were historical residues
 	// of the database-driven layout; they are superseded by this form.
+	//
+	// Available widgets: quick-access, bookmarks, notes, recently-visited,
+	// rss, quote, kotoba, system-stats, timer, rain, image, calendar, status
 	Columns []ColumnConfig `yaml:"columns"`
 }
 
@@ -134,26 +137,4 @@ func loadConfig(path string) AppConfig {
 	return base
 }
 
-// allWidgetIDs returns a flat list of all widget ids across all columns,
-// in declaration order. Used to build the widget map and script list.
-func allWidgetIDs() []string {
-	var ids []string
-	for _, col := range cfg.Columns {
-		for _, w := range col.Widgets {
-			ids = append(ids, w.ID)
-		}
-	}
-	return ids
-}
 
-// widgetActive returns true if the given id appears in any column.
-func widgetActive(id string) bool {
-	for _, col := range cfg.Columns {
-		for _, w := range col.Widgets {
-			if w.ID == id {
-				return true
-			}
-		}
-	}
-	return false
-}
