@@ -18,6 +18,16 @@ body.theme-dark {
     --accent3:   #90d870;
     --red:       #f28080;
     --titlebar:  #0e0d16;
+    --gold:       #d8b440;
+    --hover-bg:    rgba(138, 180, 248, 0.08);
+    --hover-dim:   rgba(138, 180, 248, 0.05);
+    --hover-subtle: rgba(138, 180, 248, 0.04);
+    --sel-bg:      rgba(138, 180, 248, 0.25);
+    --glow:        0 0 8px rgba(138, 180, 248, 0.25);
+    --glow-strong: 0 0 14px rgba(138, 180, 248, 0.5), 0 0 28px rgba(138, 180, 248, 0.15);
+    --glow-dim:    0 0 10px rgba(138, 180, 248, 0.3);
+    --glow-bright: 0 0 18px rgba(138, 180, 248, 0.55);
+    --glow-out:    0 0 20px rgba(138, 180, 248, 0.3);
 }
 
 /* Light */
@@ -35,6 +45,16 @@ body.theme-light {
     --accent3:   #3a9a3a;
     --red:       #c83030;
     --titlebar:  #dcdce0;
+    --gold:       #b89830;
+    --hover-bg:    rgba(58, 111, 216, 0.08);
+    --hover-dim:   rgba(58, 111, 216, 0.05);
+    --hover-subtle: rgba(58, 111, 216, 0.04);
+    --sel-bg:      rgba(58, 111, 216, 0.25);
+    --glow:        0 0 8px rgba(58, 111, 216, 0.25);
+    --glow-strong: 0 0 14px rgba(58, 111, 216, 0.5), 0 0 28px rgba(58, 111, 216, 0.15);
+    --glow-dim:    0 0 10px rgba(58, 111, 216, 0.3);
+    --glow-bright: 0 0 18px rgba(58, 111, 216, 0.55);
+    --glow-out:    0 0 20px rgba(58, 111, 216, 0.3);
 }
 
 /* Light theme — component overrides */

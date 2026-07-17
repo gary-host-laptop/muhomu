@@ -294,7 +294,7 @@ body.font-orbitron .timer-sep {
 body.edit-mode #edit-toggle {
     color: var(--accent2);
     border-color: var(--accent2);
-    background: rgba(196, 160, 248, 0.08);
+    background: var(--hover-bg);
 }
 #settings-btn:hover {
     color: var(--dim);
@@ -371,7 +371,7 @@ body.edit-mode #edit-toggle {
 }
 
 .engine-btn.active {
-    background: rgba(138, 180, 248, 0.08);
+    background: var(--hover-bg);
 }
 
 /* Accent strip */
@@ -590,8 +590,8 @@ summary.folder-head {
 
 summary.folder-head:hover {
     color: var(--white);
-    border-left-color: var(--red);
-    background: rgba(255, 100, 100, 0.05);
+    border-left-color: var(--accent);
+    background: var(--hover-dim);
 }
 
 summary.folder-head::-webkit-details-marker {
@@ -663,9 +663,9 @@ a.fav-tile {
 }
 
 a.fav-tile:hover {
-    color: var(--red);
-    background: rgba(255, 100, 100, 0.04);
-    border-left: 1px solid var(--red);
+    color: var(--accent);
+    background: var(--hover-subtle);
+    border-left: 1px solid var(--accent);
 }
 
 a.fav-tile img.fav {
@@ -778,7 +778,7 @@ body.edit-mode .folder-head-btns {
 .quick-links a:hover {
     color: var(--white);
     border-left-color: var(--accent);
-    background: rgba(138, 180, 248, 0.05);
+    background: var(--hover-dim);
 }
 
 .quick-links a .ql-icon {
@@ -1317,8 +1317,8 @@ body.edit-mode .qa-btn-group {
     color: var(--accent2);
 }
 .kanji-level.n2 {
-    border-color: #d8b440;
-    color: #d8b440;
+    border-color: var(--gold);
+    color: var(--gold);
 }
 .kanji-level.n1 {
     border-color: var(--red);
@@ -1358,7 +1358,7 @@ body.edit-mode .quick-links a:active {
 }
 body.edit-mode .quick-links a.drag-over {
     border-left-color: var(--accent) !important;
-    background: rgba(138, 180, 248, 0.08);
+    background: var(--hover-bg);
 }
 body.edit-mode details.folder {
     cursor: grab;
@@ -1367,8 +1367,8 @@ body.edit-mode details.folder:active {
     cursor: grabbing;
 }
 body.edit-mode details.folder.drag-over {
-    border-left: 2px solid var(--red);
-    background: rgba(242, 128, 128, 0.04);
+    border-left: 2px solid var(--accent);
+    background: var(--hover-subtle);
 }
 body.edit-mode .fav-tile {
     cursor: grab;
@@ -1377,8 +1377,8 @@ body.edit-mode .fav-tile:active {
     cursor: grabbing;
 }
 body.edit-mode .fav-tile.drag-over {
-    border-color: var(--red);
-    background: rgba(242, 128, 128, 0.04);
+    border-color: var(--accent);
+    background: var(--hover-subtle);
 }
 
 /* Context menu */
@@ -1440,7 +1440,7 @@ body.edit-mode .fav-tile.drag-over {
 
 /* Selection */
 ::selection {
-    background: rgba(138, 180, 248, 0.25);
+    background: var(--sel-bg);
     color: var(--white);
 }
 
@@ -1515,8 +1515,8 @@ body.edit-mode .fav-tile.drag-over {
 
 .rss-item:hover {
     color: var(--white);
-    border-left-color: var(--accent3);
-    background: rgba(144, 216, 112, 0.04);
+    border-left-color: var(--accent);
+    background: var(--hover-subtle);
 }
 
 .rss-fav {
@@ -1769,7 +1769,7 @@ body.edit-mode .fav-tile.drag-over {
 
 td.today {
     color: var(--accent);
-    text-shadow: 0 0 8px rgba(138, 180, 248, 0.25);
+    text-shadow: var(--glow);
     position: relative;
     transition:
         text-shadow 0.2s,
@@ -1795,20 +1795,20 @@ td.today::after {
 }
 
 td.today:hover {
-    color: #b8d4ff;
-    text-shadow: 0 0 14px rgba(138, 180, 248, 0.5), 0 0 28px rgba(138, 180, 248, 0.15);
+    color: var(--accent);
+    text-shadow: var(--glow-strong);
 }
 
 td.today:hover::after {
     width: 85%;
     opacity: 0.85;
-    box-shadow: 0 0 10px var(--accent), 0 0 20px rgba(138, 180, 248, 0.3);
+    box-shadow: 0 0 10px var(--accent), var(--glow-out);
 }
 
 .cal-header-today {
     position: relative;
     color: var(--accent);
-    text-shadow: 0 0 10px rgba(138, 180, 248, 0.3);
+    text-shadow: var(--glow-dim);
     letter-spacing: 3px;
     transition:
         text-shadow 0.3s,
@@ -1837,7 +1837,7 @@ td.today:hover::after {
 }
 
 .cal-header-today:hover {
-    text-shadow: 0 0 18px rgba(138, 180, 248, 0.55);
+    text-shadow: var(--glow-bright);
     letter-spacing: 4px;
 }
 
