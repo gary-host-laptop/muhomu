@@ -15,6 +15,12 @@ import (
 	"math/rand"
 )
 
+// ConfigQuote carries a user-defined quote from the YAML config.
+type ConfigQuote struct {
+	Text   string
+	Author string
+}
+
 // RenderContext carries the material conditions available to each widget
 // at render time. Widgets take only what they need from this context.
 type RenderContext struct {
@@ -30,6 +36,7 @@ type RenderContext struct {
 	LocationLat    string
 	LocationLon    string
 	DefaultLED     string
+	ConfigQuotes   []ConfigQuote
 	Options        map[string]interface{}
 }
 

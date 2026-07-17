@@ -37,10 +37,10 @@ type Quote struct {
 }
 
 type Word struct {
-	K string
-	R string
-	M string
-	L string
+	K string `json:"k"`
+	R string `json:"r"`
+	M string `json:"m"`
+	L string `json:"l"`
 }
 
 func dbBookmarks(db *sql.DB) ([]BookmarkFolder, error) {

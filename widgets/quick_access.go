@@ -15,12 +15,6 @@ func (w *QuickAccessWidget) Render(ctx RenderContext) (template.HTML, error) {
 	if err != nil {
 		return "", err
 	}
-	if len(items) == 0 {
-		items = []QuickItem{
-			{Label: "GitHub",  URL: "https://github.com",  Favicon: "https://icons.duckduckgo.com/ip3/github.com.ico"},
-			{Label: "YouTube", URL: "https://youtube.com", Favicon: "https://icons.duckduckgo.com/ip3/youtube.com.ico"},
-		}
-	}
 	var sb strings.Builder
 	sb.WriteString(`<div class="widget-body" style="padding:6px 10px"><div class="quick-links">`)
 	for i, item := range items {
@@ -41,7 +35,7 @@ func (w *QuickAccessWidget) Render(ctx RenderContext) (template.HTML, error) {
 func (w *QuickAccessWidget) Script() string {
 	return `(function(){
   if(!document.querySelector(".quick-links"))return;
-  let _data=(window.__INITIAL_DATA__&&window.__INITIAL_DATA__.nt_quick)||QA_DEFAULTS;
+  let _data=(window.__INITIAL_DATA__&&window.__INITIAL_DATA__.nt_quick)||[];
   async function save(){await Store.set("nt_quick",_data);}
   function load(){
     const container=document.querySelector(".quick-links");

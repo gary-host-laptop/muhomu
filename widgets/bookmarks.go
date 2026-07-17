@@ -55,7 +55,7 @@ func renderBookmarks(folders []BookmarkFolder) template.HTML {
 func (w *BookmarksWidget) Script() string {
 	return `(function(){
   if(!document.getElementById("folder-list"))return;
-  let _data=(window.__INITIAL_DATA__&&window.__INITIAL_DATA__.nt_bookmarks)||BM_DEFAULTS;
+  let _data=(window.__INITIAL_DATA__&&window.__INITIAL_DATA__.nt_bookmarks)||[];
   async function save(){await Store.set("nt_bookmarks",_data);}
   function load(){
     const list=document.getElementById("folder-list");

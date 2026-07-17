@@ -12,6 +12,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"muhomu/widgets"
 )
 
 // ── fetchUserData ─────────────────────────────────────────────
@@ -436,6 +438,53 @@ func handleDeleteQuote(w http.ResponseWriter, r *http.Request) {
 	}
 	invalidateCache()
 	jsonOK(w, map[string]string{"ok": "true"})
+}
+
+// ── GET /api/quote/random ─────────────────────────────────────
+// Returns a random quote from data/quotes.yaml. Falls back to
+// DB quotes if the file has none.
+
+func handleQuoteRandom(w http.ResponseWriter, r *http.Request) {
+	if len(quotes) > 0 {
+		q := quotes[rand.Intn(len(quotes))]
+		jsonOK(w, q)
+		return
+	}
+	// fallback: DB quotes
+	dbQs, err := getQuotes()
+	if err != nil || len(dbQs) == 0 {
+		jsonErr(w, "no quotes available", 404)
+		return
+	}
+	q := dbQs[rand.Intn(len(dbQs))]
+	jsonOK(w, q)
+}
+
+// ── GET /api/kotoba/next ──────────────────────────────────────
+// Returns a random Japanese word, optionally filtered by JLPT level.
+
+func handleKotobaNext(w http.ResponseWriter, r *http.Request) {
+	words := widgets.AllWords()
+	if len(words) == 0 {
+		jsonErr(w, "no words available", 500)
+		return
+	}
+	level := r.URL.Query().Get("level")
+	var candidates []widgets.Word
+	if level == "" || level == "all" {
+		candidates = words
+	} else {
+		for _, w := range words {
+			if w.L == level {
+				candidates = append(candidates, w)
+			}
+		}
+		if len(candidates) == 0 {
+			candidates = words
+		}
+	}
+	pick := candidates[rand.Intn(len(candidates))]
+	jsonOK(w, pick)
 }
 
 

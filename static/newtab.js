@@ -472,5 +472,10 @@ window.addEventListener("load", () => {
 /* ── PROFILE TAGLINE ─────────────────────────────────────────── */
 (function () {
   const el = document.getElementById("profile-tagline");
-  if (el) el.textContent = TAGLINES[Math.floor(Math.random() * TAGLINES.length)];
+  if (!el) return;
+  const data = window.__INITIAL_DATA__ || {};
+  const taglines = data.nt_taglines;
+  if (taglines && taglines.length > 0) {
+    el.textContent = taglines[Math.floor(Math.random() * taglines.length)];
+  }
 })();

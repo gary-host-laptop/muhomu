@@ -38,6 +38,9 @@ type AppConfig struct {
 	ThemesDir        string `yaml:"themes_dir"`
 	ThemeFile        string `yaml:"theme_file"`
 
+	// Taglines are random Japanese phrases shown on the profile.
+	Taglines []string `yaml:"taglines"`
+
 	// Columns is the authoritative declaration of layout.
 	// Each column declares its size and the ordered list of widgets
 	// it contains. Order is determined by position in the list —
@@ -49,6 +52,11 @@ type AppConfig struct {
 	// Available widgets: quick-access, bookmarks, notes, recently-visited,
 	// rss, quote, kotoba, system-stats, timer, rain, weather, image, calendar, status
 	Columns []ColumnConfig `yaml:"columns"`
+}
+
+type QuoteEntry struct {
+	Text   string `yaml:"text" json:"text"`
+	Author string `yaml:"author" json:"author"`
 }
 
 type SearchEngine struct {
@@ -74,6 +82,30 @@ type WidgetConfig struct {
 
 var cfg AppConfig
 
+// quotes holds user-declared quotes loaded from data/quotes.yaml.
+var quotes []QuoteEntry
+
+func loadQuotes(path string) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		if os.IsNotExist(err) {
+			log.Printf("quotes: %s not found — no quotes loaded", path)
+		} else {
+			log.Printf("quotes: error reading %s: %v", path, err)
+		}
+		return
+	}
+	var qf struct {
+		Quotes []QuoteEntry `yaml:"quotes"`
+	}
+	if err := yaml.Unmarshal(data, &qf); err != nil {
+		log.Printf("quotes: error parsing %s: %v", path, err)
+		return
+	}
+	quotes = qf.Quotes
+	log.Printf("quotes: loaded %d from %s", len(quotes), path)
+}
+
 func defaultConfig() AppConfig {
 	return AppConfig{
 		Theme:        "dark",
@@ -94,6 +126,13 @@ func defaultConfig() AppConfig {
 			{Name: "youtube", URL: "https://www.youtube.com/results?search_query="},
 			{Name: "github", URL: "https://github.com/search?q="},
 		},
+		Taglines: []string{
+			"過去を殺せ",
+			"ほしのこえ",
+			"星の大海",
+			"攻殻機動隊",
+			"銀河鉄道の夜",
+		},
 		Columns: []ColumnConfig{
 			{Size: "small", Widgets: []WidgetConfig{
 				{ID: "quick-access"},
@@ -113,7 +152,7 @@ func defaultConfig() AppConfig {
 				{ID: "calendar"},
 			}},
 		},
-}
+	}
 }
 
 func loadConfig(path string) AppConfig {
@@ -122,9 +161,11 @@ func loadConfig(path string) AppConfig {
 	data, err := os.ReadFile(path)
 	if err != nil {
 		if os.IsNotExist(err) {
-			log.Printf("config: %s not found, using defaults", path)
+			log.Printf("config: %s not found — no widgets will be rendered", path)
+			base.Columns = nil
 		} else {
-			log.Printf("config: error reading %s: %v — using defaults", path, err)
+			log.Printf("config: error reading %s: %v — no widgets will be rendered", path, err)
+			base.Columns = nil
 		}
 		return base
 	}

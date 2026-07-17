@@ -87,6 +87,8 @@ func main() {
 	flag.Parse()
 
 	cfg = loadConfig(*configPath)
+	quotesPath := filepath.Join(*dataDir, "quotes.yaml")
+	loadQuotes(quotesPath)
 
 	resolve := func(cfgVal, def string) string {
 		if cfgVal != "" {
@@ -129,6 +131,8 @@ func main() {
 	mux.HandleFunc("GET /api/quotes", handleGetQuotes)
 	mux.HandleFunc("POST /api/quotes", handleAddQuote)
 	mux.HandleFunc("DELETE /api/quotes/{id}", handleDeleteQuote)
+	mux.HandleFunc("GET /api/quote/random", handleQuoteRandom)
+	mux.HandleFunc("GET /api/kotoba/next", handleKotobaNext)
 
 	mux.HandleFunc("GET /api/widget-images/next", handleWidgetImageNext)
 	mux.Handle("GET /api/widget-images/files/",
@@ -232,6 +236,11 @@ func serveIndex(w http.ResponseWriter, r *http.Request) {
 	rng := rand.New(rand.NewSource(time.Now().UnixNano()))
 
 	registry := widgets.Registry()
+	// Convert quotes to widget-level ConfigQuote slice
+	configQuotes := make([]widgets.ConfigQuote, len(quotes))
+	for i, q := range quotes {
+		configQuotes[i] = widgets.ConfigQuote{Text: q.Text, Author: q.Author}
+	}
 	ctx := widgets.RenderContext{
 		DB:             db,
 		RNG:            rng,
@@ -245,6 +254,7 @@ func serveIndex(w http.ResponseWriter, r *http.Request) {
 		LocationLat:    cfg.Location.Lat,
 		LocationLon:    cfg.Location.Lon,
 		DefaultLED:     cfg.DefaultLED,
+		ConfigQuotes:   configQuotes,
 	}
 
 	// ── Render widgets and collect HTML ──
@@ -482,6 +492,7 @@ func serveIndex(w http.ResponseWriter, r *http.Request) {
 		"nt_ram":           initRAM,
 		"nt_rx":            initRX,
 		"nt_tx":            initTX,
+		"nt_taglines":      cfg.Taglines,
 	}
 	jsonInitial, _ := json.Marshal(initialData)
 
