@@ -11,6 +11,11 @@ RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w" -o muhomu .
 # ── Final image ──────────────────────────────────────────────────────────────
 FROM alpine:latest
 
+LABEL org.opencontainers.image.title="muhomu"
+LABEL org.opencontainers.image.description="A customizable browser new tab dashboard"
+LABEL org.opencontainers.image.source="https://github.com/gary-host-laptop/muhomu"
+LABEL org.opencontainers.image.licenses="MIT"
+
 RUN apk --no-cache add ca-certificates tzdata
 
 WORKDIR /app
