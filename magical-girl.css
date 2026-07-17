@@ -1,0 +1,173 @@
+/* magical-girl.css — Bubblegum pink / pastel theme
+   Use by adding to your config.yaml:
+     theme_file: magical-girl.css */
+
+:root,
+body.theme-magical-girl {
+    --bg:        #fff0f5;
+    --panel:     #ffe4ed;
+    --panel2:    #ffd9e6;
+    --border:    #ffb3c6;
+    --border-lt: #ffccd9;
+    --titlebar:  #ffd9e6;
+    --white:     #4a2c3a;
+    --dim:       #7a4a6a;
+    --dimmer:    #a06a8a;
+    --accent:    #ff1493;
+    --accent2:   #d870b0;
+    --accent3:   #80ffdb;
+    --red:       #ff6b8a;
+}
+
+/* Search accent strip */
+body.theme-magical-girl .accent-strip span:nth-child(1) {
+    background: #ff6b8a;
+}
+body.theme-magical-girl .accent-strip span:nth-child(2) {
+    background: #ff1493;
+}
+body.theme-magical-girl .accent-strip span:nth-child(3) {
+    background: #d870b0;
+}
+
+/* ── Today calendar highlight ────────────────────────────────── */
+body.theme-magical-girl td.today {
+    color: #ff1493;
+    text-shadow: 0 0 12px rgba(255, 20, 147, 0.35);
+}
+body.theme-magical-girl td.today::after {
+    background: #ff1493;
+    box-shadow: 0 0 10px #ff1493;
+}
+body.theme-magical-girl td.today:hover {
+    color: #c71585;
+    text-shadow: 0 0 20px rgba(255, 20, 147, 0.6);
+}
+body.theme-magical-girl td.today:hover::after {
+    box-shadow: 0 0 16px #ff1493, 0 0 32px rgba(255, 20, 147, 0.3);
+}
+
+/* ── Cal header today ────────────────────────────────────────── */
+body.theme-magical-girl .cal-header-today {
+    color: #ff1493;
+    text-shadow: 0 0 14px rgba(255, 20, 147, 0.25);
+}
+body.theme-magical-girl .cal-header-today::before,
+body.theme-magical-girl .cal-header-today::after {
+    color: #ff1493;
+    text-shadow: 0 0 8px #ff1493;
+}
+body.theme-magical-girl .cal-header-today:hover {
+    text-shadow: 0 0 24px rgba(255, 20, 147, 0.5);
+}
+
+/* ── Links ────────────────────────────────────────────────────── */
+body.theme-magical-girl a {
+    color: #d870b0;
+    transition: color 0.15s;
+}
+body.theme-magical-girl a:hover {
+    color: #c71585;
+}
+
+/* ── Search bar focus ────────────────────────────────────────── */
+body.theme-magical-girl .search-bar input:focus {
+    border-color: #ff1493;
+}
+
+/* ── Engine buttons ──────────────────────────────────────────── */
+body.theme-magical-girl .engine-btn:hover,
+body.theme-magical-girl .engine-btn.active {
+    color: #ff1493;
+    border-color: #ff1493;
+}
+body.theme-magical-girl .engine-btn.active {
+    background: rgba(255, 20, 147, 0.08);
+}
+
+/* ── Timer ────────────────────────────────────────────────────── */
+body.theme-magical-girl .timer-input:focus {
+    border-color: #d870b0;
+}
+
+/* ── Quick links ──────────────────────────────────────────────── */
+body.theme-magical-girl .quick-links a:hover {
+    border-left-color: #ff1493;
+    background: rgba(255, 20, 147, 0.05);
+}
+
+/* ── Bookmark tiles ──────────────────────────────────────────── */
+body.theme-magical-girl a.fav-tile:hover {
+    color: #ff1493;
+    border-left: 1px solid #ff1493;
+    background: rgba(255, 20, 147, 0.04);
+}
+
+/* ── Kanji ────────────────────────────────────────────────────── */
+body.theme-magical-girl .kanji-char:hover {
+    color: #ff1493;
+}
+body.theme-magical-girl .kanji-reading {
+    color: #d870b0;
+}
+
+/* ── Recently visited ─────────────────────────────────────────── */
+body.theme-magical-girl .recent-tile:hover {
+    border-color: #d870b0;
+}
+body.theme-magical-girl .recent-tile:hover .rt-name {
+    color: #d870b0;
+}
+
+/* ── Edit toggle ──────────────────────────────────────────────── */
+body.theme-magical-girl #edit-toggle:hover {
+    color: #ff1493;
+    border-color: #ff1493;
+}
+body.theme-magical-girl.edit-mode #edit-toggle {
+    color: #ff1493;
+    border-color: #ff1493;
+    background: rgba(255, 20, 147, 0.08);
+}
+
+/* ── Folder summary ──────────────────────────────────────────── */
+body.theme-magical-girl summary.folder-head:hover {
+    border-left-color: #ff6b8a;
+    background: rgba(255, 107, 138, 0.05);
+}
+
+/* ── Quick-add buttons ───────────────────────────────────────── */
+body.theme-magical-girl .recent-quick-add button:hover {
+    color: #d870b0;
+    border-color: #d870b0;
+}
+
+/* ── Timer urgency ────────────────────────────────────────────── */
+body.theme-magical-girl .timer-btn:hover {
+    color: #ff1493;
+    border-color: #ff1493;
+}
+
+/* ── Clock ────────────────────────────────────────────────────── */
+body.theme-magical-girl #clock {
+    color: #4a2c3a;            /* dark plum for readability */
+}
+body.theme-magical-girl #greeting {
+    color: #d870b0;
+}
+
+/* ── Avatar corners ──────────────────────────────────────────── */
+body.theme-magical-girl .av-corner.tl,
+body.theme-magical-girl .av-corner.tr,
+body.theme-magical-girl .av-corner.bl,
+body.theme-magical-girl .av-corner.br {
+    border-color: #ff1493;
+}
+
+/* ── Weather ──────────────────────────────────────────────────── */
+body.theme-magical-girl .weather-hilo {
+    color: #d870b0;
+}
+body.theme-magical-girl .weather-condition {
+    color: #7a4a6a;
+}

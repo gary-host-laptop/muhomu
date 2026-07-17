@@ -15,7 +15,7 @@ func (w *BookmarksWidget) Render(ctx RenderContext) (template.HTML, error) {
 	if err != nil {
 		return "", err
 	}
-	return wrap("bookmarks", "red", "ブックマーク",
+	return wrap(ctx, "bookmarks", "ブックマーク",
 		`<button class="wt-btn" id="bm-add-folder-btn"><i class="ph-light ph-plus"></i></button>`,
 		string(renderBookmarks(folders))), nil
 }

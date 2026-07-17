@@ -1,54 +1,15 @@
-/* ══════════════════════════════════════════════════════════════
-   fonts.css — @font-face declarations
-   ══════════════════════════════════════════════════════════════ */
+/* fonts.css — @font-face declarations */
+
 @font-face {
     font-family: "DotGothic16";
     src: url("assets/fonts/DotGothic16-Regular.ttf") format("truetype");
 }
-@font-face {
-    font-family: "Medodica";
-    src: url("assets/fonts/MedodicaRegular.otf") format("opentype");
-}
+
 @font-face {
     font-family: "Orbitron";
     src: url("assets/fonts/Orbitron-VariableFont_wght.ttf") format("truetype");
 }
-@font-face {
-    font-family: "Oxanium";
-    src: url("assets/fonts/Oxanium-VariableFont_wght.ttf") format("truetype");
-}
-@font-face {
-    font-family: "Share Tech Mono";
-    src: url("assets/fonts/ShareTechMono-Regular.ttf") format("truetype");
-}
-@font-face {
-    font-family: "VT323";
-    src: url("assets/fonts/VT323-Regular.ttf") format("truetype");
-}
-@font-face {
-    font-family: "Courier Prime";
-    src: url("assets/fonts/CourierPrime-Regular.ttf") format("truetype");
-    font-weight: 400;
-}
-@font-face {
-    font-family: "Courier Prime";
-    src: url("assets/fonts/CourierPrime-Bold.ttf") format("truetype");
-    font-weight: 700;
-}
-@font-face {
-    font-family: "BIZ UDGothic";
-    src: url("assets/fonts/BIZUDGothic-Regular.ttf") format("truetype");
-    font-weight: 400;
-}
-@font-face {
-    font-family: "BIZ UDGothic";
-    src: url("assets/fonts/BIZUDGothic-Bold.ttf") format("truetype");
-    font-weight: 700;
-}
-@font-face {
-    font-family: "Noto Sans JP";
-    src: url("assets/fonts/NotoSansJP-VariableFont_wght.ttf") format("truetype");
-}
+
 @font-face {
     font-family: "Inter";
     src: url("/static/assets/fonts/Inter-VariableFont_opsz,wght.ttf")

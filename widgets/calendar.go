@@ -89,5 +89,5 @@ func (w *CalendarWidget) Render(ctx RenderContext) (template.HTML, error) {
 	}
 
 	sb.WriteString(`</table></div>`)
-	return wrap("calendar", "blue", "カレンダー", "", sb.String()), nil
+	return wrap(ctx, "calendar", "カレンダー", "", sb.String()), nil
 }

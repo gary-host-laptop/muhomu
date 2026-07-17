@@ -244,6 +244,7 @@ func serveIndex(w http.ResponseWriter, r *http.Request) {
 		LocationCity:   cfg.Location.City,
 		LocationLat:    cfg.Location.Lat,
 		LocationLon:    cfg.Location.Lon,
+		DefaultLED:     cfg.DefaultLED,
 	}
 
 	// ── Render widgets and collect HTML ──
@@ -308,20 +309,13 @@ func serveIndex(w http.ResponseWriter, r *http.Request) {
 
 	// ── Fonts ──
 	fontLatinMap := map[string]string{
-		"inter":           "'Inter', sans-serif",
-		"share-tech-mono": "'Share Tech Mono', monospace",
-		"vt323":           "'VT323', monospace",
-		"courier-prime":   "'Courier Prime', monospace",
+		"inter": "'Inter', sans-serif",
 	}
 	fontJpMap := map[string]string{
-		"dotgothic16":  "'DotGothic16', monospace",
-		"biz-udgothic": "'BIZ UDGothic', sans-serif",
-		"noto-sans-jp": "'Noto Sans JP', sans-serif",
+		"dotgothic16": "'DotGothic16', monospace",
 	}
 	fontClockMap := map[string]string{
-		"medodica": "'Medodica', monospace",
 		"orbitron": "'Orbitron', monospace",
-		"oxanium":  "'Oxanium', monospace",
 	}
 	fontPixel := ""
 	if fl, ok := fontLatinMap[cfg.FontLatin]; ok {
@@ -332,6 +326,8 @@ func serveIndex(w http.ResponseWriter, r *http.Request) {
 		fontPixel = fl + ", " + jp
 	} else if fj, ok := fontJpMap[cfg.FontJP]; ok {
 		fontPixel = "'DotGothic16', " + fj
+	} else if cfg.FontLatin == "" {
+		fontPixel = "'Inter', 'DotGothic16', monospace"
 	}
 	fontDoto := fontClockMap[cfg.FontClock]
 	fontClass := "font-" + cfg.FontClock

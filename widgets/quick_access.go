@@ -33,7 +33,7 @@ func (w *QuickAccessWidget) Render(ctx RenderContext) (template.HTML, error) {
 </a>`, item.URL, i, fav, htmlEscape(item.Label))
 	}
 	sb.WriteString(`</div></div>`)
-	return wrap("quick-access", "blue", "クイックアクセス",
+	return wrap(ctx, "quick-access", "クイックアクセス",
 		`<button class="wt-btn" id="qa-add-btn"><i class="ph-light ph-plus"></i></button>`,
 		sb.String()), nil
 }

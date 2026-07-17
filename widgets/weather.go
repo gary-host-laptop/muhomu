@@ -37,7 +37,7 @@ func (w *WeatherWidget) Render(ctx RenderContext) (template.HTML, error) {
 
 	if lat == "" || lon == "" {
 		// No location configured — show empty state
-		return wrap("weather", "blue", "天気", "",
+		return wrap(ctx, "weather", "天気", "",
 			`<div class="widget-body"><div class="weather-empty">no location set</div></div>`), nil
 	}
 
@@ -53,14 +53,14 @@ func (w *WeatherWidget) Render(ctx RenderContext) (template.HTML, error) {
 	client := &http.Client{Timeout: 5 * time.Second}
 	resp, err := client.Get(url)
 	if err != nil {
-		return wrap("weather", "blue", "天気", "",
+		return wrap(ctx, "weather", "天気", "",
 			`<div class="widget-body"><div class="weather-empty">fetch failed</div></div>`), nil
 	}
 	defer resp.Body.Close()
 
 	var data openMeteoResponse
 	if err := json.NewDecoder(resp.Body).Decode(&data); err != nil {
-		return wrap("weather", "blue", "天気", "",
+		return wrap(ctx, "weather", "天気", "",
 			`<div class="widget-body"><div class="weather-empty">parse failed</div></div>`), nil
 	}
 
@@ -101,7 +101,7 @@ func (w *WeatherWidget) Render(ctx RenderContext) (template.HTML, error) {
   %s
 </div></div>`, temp, condition, feelsLike, hilo, locationLine)
 
-	return wrap("weather", "blue", "天気", "", inner), nil
+	return wrap(ctx, "weather", "天気", "", inner), nil
 }
 
 // wmoWeatherDescription maps WMO weather codes to human-readable strings.

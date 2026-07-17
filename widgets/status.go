@@ -13,5 +13,5 @@ func (w *StatusWidget) Render(ctx RenderContext) (template.HTML, error) {
   <div class="status-row"><span class="label">year</span><span class="value" id="year-progress">—</span></div>
   <div class="status-row"><span class="label">temp</span><span class="value" id="temperature">—</span></div>
 </div></div>`
-	return wrap("status", "red", "状態", "", inner), nil
+	return wrap(ctx, "status", "状態", "", inner), nil
 }

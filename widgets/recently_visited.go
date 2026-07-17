@@ -31,7 +31,7 @@ func (w *RecentlyVisitedWidget) Render(ctx RenderContext) (template.HTML, error)
   <input type="text" id="rqa-url" placeholder="https://..." autocomplete="off" />
   <button id="rqa-btn"><span>+</span></button>
 </div></div>`)
-	return wrap("recently-visited", "pink", "後で見る", "", sb.String()), nil
+	return wrap(ctx, "recently-visited", "後で見る", "", sb.String()), nil
 }
 
 func (w *RecentlyVisitedWidget) Script() string {

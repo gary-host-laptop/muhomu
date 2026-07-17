@@ -23,7 +23,7 @@ func (w *TimerWidget) Render(ctx RenderContext) (template.HTML, error) {
 <button id="timer-reset" style="display:none;"></button>`
 	acts := `<button class="wt-act" id="timer-trash" title="clear timer"><i class="ph-light ph-trash"></i></button>
     <button class="wt-act" id="timer-start"><i class="ph-light ph-play"></i></button>`
-	return wrap("timer", "green", "タイマー", acts, inner), nil
+	return wrap(ctx, "timer", "タイマー", acts, inner), nil
 }
 
 func (w *TimerWidget) Script() string {

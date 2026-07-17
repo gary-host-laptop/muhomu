@@ -26,7 +26,7 @@ func (w *RainWidget) Render(ctx RenderContext) (template.HTML, error) {
     <input type="range" class="rain-slider" id="vol-thunder" min="0" max="1" step="0.01" value="0.5">
   </div>
 </div>`
-	return wrap("rain", "blue", "雨音",
+	return wrap(ctx, "rain", "雨音",
 		`<button class="wt-act" id="rain-btn"><i class="ph-light ph-play"></i></button>`,
 		inner), nil
 }

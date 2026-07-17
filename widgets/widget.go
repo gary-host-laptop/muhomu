@@ -29,6 +29,7 @@ type RenderContext struct {
 	LocationCity   string
 	LocationLat    string
 	LocationLon    string
+	DefaultLED     string
 	Options        map[string]interface{}
 }
 
@@ -80,11 +81,22 @@ func Registry() map[string]Widget {
 
 // wrap produces the outer widget chrome (title bar + body container)
 // around inner html. All widgets share this structure.
-func wrap(id, barColor, label, acts, inner string) template.HTML {
+// The LED color is determined by (highest priority first):
+//  1. Per-widget "led" option in ctx.Options
+//  2. Global ctx.DefaultLED (from config's default_led)
+//  3. Fallback: var(--accent)
+func wrap(ctx RenderContext, id, label, acts, inner string) template.HTML {
+	ledColor := ctx.DefaultLED
+	if ledColor == "" {
+		ledColor = "var(--accent)"
+	}
+	if c, ok := ctx.Options["led"].(string); ok && c != "" {
+		ledColor = c
+	}
 	return template.HTML(`
 <div class="widget" data-widget="` + id + `">
   <div class="widget-title">
-    <div class="wt-bar ` + barColor + `"></div>
+    <div class="led" style="--led-color:` + ledColor + `"></div>
     <span class="wt-label" data-widget-label="` + id + `">` + label + `</span>
     ` + acts + `
   </div>

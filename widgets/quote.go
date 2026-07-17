@@ -24,7 +24,7 @@ func (w *QuoteWidget) Render(ctx RenderContext) (template.HTML, error) {
 </blockquote></div>`,
 		htmlEscape(q.Text), htmlEscape(q.Author),
 	)
-	return wrap("quote", "blue", "名言",
+	return wrap(ctx, "quote", "名言",
 		`<button class="wt-act" id="quote-next"><i class="ph-light ph-caret-right"></i></button>`,
 		inner), nil
 }

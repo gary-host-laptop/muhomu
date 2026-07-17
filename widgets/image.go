@@ -25,15 +25,9 @@ func (w *ImageWidget) Render(ctx RenderContext) (template.HTML, error) {
 	inner := fmt.Sprintf(`<div class="widget-img-inner">
   <div class="widget-img-wrap" id="widget-img-wrap">%s</div>
 </div>`, imgHTML)
-	return template.HTML(`
-<div class="widget image-widget" data-widget="image">
-  <div class="widget-title">
-    <div class="wt-bar red"></div>
-    <span class="wt-label" data-widget-label="image">イメージ</span>
-    <button class="wt-act" id="widget-img-next" title="random image"><i class="ph-light ph-shuffle"></i></button>
-  </div>
-  ` + inner + `
-</div>`), nil
+	return wrap(ctx, "image", "イメージ",
+		`<button class="wt-act" id="widget-img-next" title="random image"><i class="ph-light ph-shuffle"></i></button>`,
+		inner), nil
 }
 
 var allowedExts = map[string]bool{

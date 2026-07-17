@@ -18,7 +18,7 @@ func (w *NotesWidget) Render(ctx RenderContext) (template.HTML, error) {
 		`<div class="widget-body"><textarea id="notes" placeholder="// type here. auto-saves.">%s</textarea></div>`,
 		htmlEscape(content),
 	)
-	return wrap("notes", "green", "メモ帳",
+	return wrap(ctx, "notes", "メモ帳",
 		`<button class="wt-act" id="notes-clear"><i class="ph-light ph-trash"></i></button>`,
 		inner), nil
 }

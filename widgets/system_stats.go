@@ -10,7 +10,7 @@ func (w *SystemStatsWidget) Render(ctx RenderContext) (template.HTML, error) {
 	inner := `<div class="widget-body" style="padding:6px">
   <canvas id="stats-canvas" width="300" height="150"></canvas>
 </div>`
-	return wrap("system-stats", "blue", "システム", "", inner), nil
+	return wrap(ctx, "system-stats", "システム", "", inner), nil
 }
 
 func (w *SystemStatsWidget) Script() string {

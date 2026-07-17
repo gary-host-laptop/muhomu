@@ -1,20 +1,11 @@
-/* ══════════════════════════════════════════════════════════════
-   theme.css — theme variable definitions for 無タブ
-   ──────────────────────────────────────────────────────────────
-   Each theme is a body class: body.theme-dark, body.theme-light
-   The default (no class) falls back to dark.
+/* theme.css — theme variable definitions */
 
-   To add a new theme:
-     1. Add a body.theme-NAME { ... } block below
-     2. Add it to the THEMES registry in options.js
-   ══════════════════════════════════════════════════════════════ */
-
-/* ── DARK (default) ───────────────────────────────────────────── */
+/* Dark (default) */
 :root,
 body.theme-dark {
     --bg:        #060608;
     --font-pixel: 'DotGothic16', monospace;
-    --font-doto:  'Medodica', monospace;
+    --font-doto:  'Orbitron', monospace;
     --panel:     #12111a;
     --panel2:    #16151f;
     --border:    #302d42;
@@ -29,7 +20,7 @@ body.theme-dark {
     --titlebar:  #0e0d16;
 }
 
-/* ── LIGHT ────────────────────────────────────────────────────── */
+/* Light */
 body.theme-light {
     --bg:        #e8e8e8;
     --panel:     #f2f2f2;
@@ -44,4 +35,50 @@ body.theme-light {
     --accent3:   #3a9a3a;
     --red:       #c83030;
     --titlebar:  #dcdce0;
+}
+
+/* Light theme — component overrides */
+body.theme-light #crt {
+    background: repeating-linear-gradient(
+        0deg,
+        transparent,
+        transparent 2px,
+        rgba(0, 0, 0, 0.018) 2px,
+        rgba(0, 0, 0, 0.018) 4px
+    );
+}
+
+body.theme-light #edit-toggle,
+body.theme-light #settings-btn {
+    color: var(--dim);
+    border-color: var(--border-lt);
+    background: none;
+}
+body.theme-light #edit-toggle:hover {
+    color: var(--accent2);
+    border-color: var(--accent2);
+}
+body.theme-light #settings-btn:hover {
+    color: var(--dim);
+    border-color: var(--dim);
+}
+body.theme-light.edit-mode #edit-toggle {
+    color: var(--accent2);
+    border-color: var(--accent2);
+    background: rgba(196, 160, 248, 0.08);
+}
+
+body.theme-light .wt-act,
+body.theme-light .wt-btn,
+body.theme-light .folder-head-btn,
+body.theme-light .qa-edit,
+body.theme-light .tile-edit {
+    color: var(--dim);
+}
+body.theme-light .wt-act:hover,
+body.theme-light .wt-btn:hover,
+body.theme-light .folder-head-btn:hover,
+body.theme-light .qa-edit:hover,
+body.theme-light .tile-edit:hover {
+    color: var(--white);
 }

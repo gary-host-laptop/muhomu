@@ -40,7 +40,7 @@ func (w *KotobaWidget) Render(ctx RenderContext) (template.HTML, error) {
   </div>
   <div class="kanji-meaning" id="kanji-meaning">%s</div>
 </div>`, word.K, word.K, word.R, word.L, word.L, word.M)
-	return wrap("kotoba", "pink", "言葉",
+	return wrap(ctx, "kotoba", "言葉",
 		`<button class="wt-act" id="kanji-next"><i class="ph-light ph-caret-right"></i></button>`,
 		inner), nil
 }

@@ -20,6 +20,7 @@ type AppConfig struct {
 	TitleLang    string `yaml:"title_lang"`
 	Username     string `yaml:"username"`
 	SearchTarget string `yaml:"search_target"`
+	DefaultLED   string `yaml:"default_led"`
 
 	Location struct {
 		City string `yaml:"city"`
@@ -76,7 +77,7 @@ var cfg AppConfig
 func defaultConfig() AppConfig {
 	return AppConfig{
 		Theme:        "dark",
-		FontLatin:    "share-tech-mono",
+		FontLatin:    "inter",
 		FontJP:       "dotgothic16",
 		FontClock:    "orbitron",
 		ClockFormat:  "24h",
@@ -86,6 +87,7 @@ func defaultConfig() AppConfig {
 		UILang:       "en",
 		TitleLang:    "ja",
 		SearchTarget: "_self",
+		DefaultLED:   "var(--accent)",
 		JLPTLevel:    "all",
 		SearchEngines: []SearchEngine{
 			{Name: "duckduckgo", URL: "https://duckduckgo.com/?q=", Default: true},
@@ -111,7 +113,7 @@ func defaultConfig() AppConfig {
 				{ID: "calendar"},
 			}},
 		},
-	}
+}
 }
 
 func loadConfig(path string) AppConfig {

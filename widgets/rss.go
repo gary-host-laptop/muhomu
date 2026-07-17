@@ -261,7 +261,7 @@ func (w *RSSWidget) Render(ctx RenderContext) (template.HTML, error) {
 	}
 
 	inner := fmt.Sprintf(`<div class="widget-body rss-body"><div class="%s">%s</div></div>`, containerClass, sb.String())
-	return wrap("rss", "green", "フィード",
+	return wrap(ctx, "rss", "フィード",
 		`<button class="wt-btn" data-widget-btn="rss"><i class="ph-light ph-pencil-simple"></i></button>`,
 		inner), nil
 }
