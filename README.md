@@ -3,10 +3,35 @@
 </div>
 
 ---
-<img src="./screenshot.png" />
+<img src="./static/assets/images/screenshot.png" />
 
 
 ### Quick start
+
+#### Using a pre-built image (GHCR)
+
+```
+docker run -d \
+  --name muhomu \
+  -p 4444:4444 \
+  -v ./data:/data:z \
+  ghcr.io/gary-host-laptop/muhomu:latest
+```
+
+Or with Docker Compose:
+
+```yaml
+services:
+  muhomu:
+    image: ghcr.io/gary-host-laptop/muhomu:latest
+    ports:
+      - "4444:4444"
+    volumes:
+      - ./data:/data:z
+    restart: unless-stopped
+```
+
+#### Building from source
 
 ```
 docker compose up -d --build
@@ -14,7 +39,7 @@ docker compose up -d --build
 
 Open `http://localhost:4444`. Edit `data/config.yaml` and restart to reconfigure.
 
-Or without Docker:
+Or run directly:
 
 ```
 go run . -config ./data/config.yaml
