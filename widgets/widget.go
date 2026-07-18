@@ -48,16 +48,6 @@ type Widget interface {
 	Render(ctx RenderContext) (template.HTML, error)
 }
 
-// Scriptable is an optional interface a widget may implement if it
-// requires client-side javascript for interactivity. The Script()
-// method returns a self-contained js string — no module system,
-// no imports, just vanilla js that will be injected into the page
-// only when this widget is active. Widgets with no client-side
-// behaviour (calendar, status) do not implement this interface.
-type Scriptable interface {
-	Script() string
-}
-
 // Registry returns the map of all available widgets keyed by their id.
 // A widget's presence here declares its existence as a possibility;
 // its presence in config.yaml declares its existence as an actuality.
@@ -71,7 +61,7 @@ func Registry() map[string]Widget {
 		&QuoteWidget{},
 		&KotobaWidget{},
 		&SystemStatsWidget{},
-		&StatusWidget{},
+
 		&ImageWidget{},
 		&TimerWidget{},
 		&RainWidget{},

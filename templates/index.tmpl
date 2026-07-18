@@ -6,7 +6,6 @@
         <style>{{.CriticalStyle}}</style>
         <link rel="stylesheet" href="/static/theme.css" />
         <style>{{.FontStyle}}</style>
-        <link rel="stylesheet" href="/static/fonts.css" />
         <link rel="stylesheet" href="/static/phosphor-light.css" />
         <link rel="stylesheet" href="/static/newtab.css" />
         {{.ThemeCSSLinks}}
@@ -39,6 +38,7 @@
                         <div class="header-name-block">
                             <span id="greeting">こんにちは</span>
                             <span id="username">{{.Username}}</span>
+                            <span id="profile-tagline"></span>
                         </div>
                         <span class="header-deco">▌│█│▌│█ ▌│▌█</span>
                     </div>
@@ -86,6 +86,7 @@
 
         <script src="/static/i18n.js"></script>
         <script src="/static/newtab.js"></script>
-        <script>{{.WidgetScripts}}</script>
+        {{range .ActiveWidgetIDs}}<script src="/static/js/widget-{{.}}.js"></script>
+{{end}}
     </body>
 </html>

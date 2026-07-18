@@ -50,7 +50,7 @@ type AppConfig struct {
 	// of the database-driven layout; they are superseded by this form.
 	//
 	// Available widgets: quick-access, bookmarks, notes, recently-visited,
-	// rss, quote, kotoba, system-stats, timer, rain, weather, image, calendar, status
+	// rss, quote, kotoba, system-stats, timer, rain, weather, image, calendar
 	Columns []ColumnConfig `yaml:"columns"`
 }
 

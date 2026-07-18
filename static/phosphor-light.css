@@ -1,9 +1,6 @@
 @font-face {
     font-family: "Phosphor-Light";
-    src:
-        url("/static/assets/fonts/Phosphor-Light.woff2") format("woff2"),
-        url("/static/assets/fonts/Phosphor-Light.woff") format("woff"),
-        url("/static/assets/fonts/Phosphor-Light.ttf") format("truetype");
+    src: url("/static/assets/fonts/Phosphor-Light.woff2") format("woff2");
     font-weight: normal;
     font-style: normal;
     font-display: block;

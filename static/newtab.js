@@ -320,21 +320,6 @@ window._clockFormat  = document.body.dataset.clockFormat  || "24h";
 window._clockSeconds = document.body.dataset.clockSeconds !== "false";
 window._uiLang       = document.body.dataset.uiLang       || "en";
 
-function getGreetingStrings(h, lang) {
-  if (lang === "ja") {
-    if (h < 5)  return ["おやすみ","夜更かしですね"];
-    if (h < 12) return ["おはようございます","おはよう"];
-    if (h < 17) return ["こんにちは","午後もよろしく"];
-    if (h < 21) return ["こんばんは","お疲れ様です"];
-    return ["おやすみなさい","また明日"];
-  }
-  if (h < 5)  return ["still up?","burning the midnight oil"];
-  if (h < 12) return ["good morning","rise and shine"];
-  if (h < 17) return ["good afternoon","hope your day is going well"];
-  if (h < 21) return ["good evening","winding down?"];
-  return ["good night","time to rest"];
-}
-
 function setGreeting(el, text) {
   if (!el) return;
   el.style.opacity = "0";
@@ -343,11 +328,6 @@ function setGreeting(el, text) {
 
 let greetingSet = null;
 let lastHour = -1;
-
-function getWeekNum(d) {
-  const onejan = new Date(d.getFullYear(), 0, 1);
-  return Math.ceil(((d - onejan) / 86400000 + onejan.getDay() + 1) / 7);
-}
 
 function tick() {
   const now  = new Date();
@@ -374,10 +354,7 @@ function tick() {
       greetingSet[Math.floor(Math.random() * greetingSet.length)]);
     document.getElementById("date").textContent =
       `${DAYS[now.getDay()].toUpperCase()} · ${MONTHS[now.getMonth()].toUpperCase()} ${now.getDate()} · ${now.getFullYear()}`;
-    const weekEl = document.getElementById("week-num");
-    const yearEl = document.getElementById("year-progress");
-    if (weekEl) weekEl.textContent = `W${pad(getWeekNum(now))}`;
-    if (yearEl) yearEl.textContent = `y · ${Math.round((now - new Date(now.getFullYear(),0,0)) / (new Date(now.getFullYear()+1,0,0) - new Date(now.getFullYear(),0,0)) * 100)}%`;
+
   }
 }
 
@@ -412,6 +389,17 @@ let activeEngine = null;
         e.target.value = "";
       }
     });
+  }
+})();
+
+/* ── PROFILE TAGLINE ─────────────────────────────────────────── */
+(function () {
+  const el = document.getElementById("profile-tagline");
+  if (!el) return;
+  const data = window.__INITIAL_DATA__ || {};
+  const taglines = data.nt_taglines;
+  if (taglines && taglines.length > 0) {
+    el.textContent = taglines[Math.floor(Math.random() * taglines.length)];
   }
 })();
 
@@ -469,13 +457,4 @@ window.addEventListener("load", () => {
   setInterval(updateFooter, 2000);
 })();
 
-/* ── PROFILE TAGLINE ─────────────────────────────────────────── */
-(function () {
-  const el = document.getElementById("profile-tagline");
-  if (!el) return;
-  const data = window.__INITIAL_DATA__ || {};
-  const taglines = data.nt_taglines;
-  if (taglines && taglines.length > 0) {
-    el.textContent = taglines[Math.floor(Math.random() * taglines.length)];
-  }
-})();
+

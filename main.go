@@ -163,58 +163,67 @@ func main() {
 	}
 }
 
-// ── collectWidgetScripts ──────────────────────────────────────
-// Recursively walks the widget tree and collects all Script() output.
-func collectWidgetScripts(registry map[string]widgets.Widget, configs []WidgetConfig, ctx widgets.RenderContext) string {
-	var sb strings.Builder
-	for _, cfg := range configs {
-		w, ok := registry[cfg.ID]
-		if !ok {
-			continue
-		}
-		// If it's a split-column, recurse into its children
-		if cfg.ID == "split-column" {
-			if rawChildren, ok := cfg.Options["widgets"].([]interface{}); ok {
-				var childConfigs []WidgetConfig
-				for _, raw := range rawChildren {
-					m, ok := raw.(map[string]interface{})
-					if !ok {
-						continue
-					}
-					id, _ := m["id"].(string)
-					if id == "" {
-						id, _ = m["type"].(string)
-					}
-					if id == "" {
-						continue
-					}
-					opts, _ := m["options"].(map[string]interface{})
-					if opts == nil {
-						opts = make(map[string]interface{})
-					}
-					// copy top-level keys as options
-					for k, v := range m {
-						if k != "id" && k != "type" && k != "options" {
-							opts[k] = v
+// widgetIDsWithScript is the set of widget IDs that have a JS file
+// in static/js/. Widgets without JS (calendar, weather)
+// are excluded to avoid 404s.
+var widgetIDsWithScript = map[string]bool{
+	"bookmarks":         true,
+	"image":             true,
+	"kotoba":            true,
+	"notes":             true,
+	"quick-access":      true,
+	"quote":             true,
+	"rain":              true,
+	"recently-visited":  true,
+	"rss":               true,
+	"system-stats":      true,
+	"timer":             true,
+}
+
+// collectActiveWidgetIDs recursively walks the widget tree and returns
+// all unique widget IDs that have a corresponding JS file in static/js/.
+func collectActiveWidgetIDs(configs []WidgetConfig) []string {
+	seen := map[string]bool{}
+	var ids []string
+	var walk func([]WidgetConfig)
+	walk = func(cfgs []WidgetConfig) {
+		for _, w := range cfgs {
+			if w.ID == "split-column" {
+				if rawChildren, ok := w.Options["widgets"].([]interface{}); ok {
+					var childConfigs []WidgetConfig
+					for _, raw := range rawChildren {
+						m, ok := raw.(map[string]interface{})
+						if !ok {
+							continue
 						}
+						id, _ := m["id"].(string)
+						if id == "" {
+							id, _ = m["type"].(string)
+						}
+						if id == "" {
+							continue
+						}
+						opts, _ := m["options"].(map[string]interface{})
+						if opts == nil {
+							opts = make(map[string]interface{})
+						}
+						for k, v := range m {
+							if k != "id" && k != "type" && k != "options" {
+								opts[k] = v
+							}
+						}
+						childConfigs = append(childConfigs, WidgetConfig{ID: id, Options: opts})
 					}
-					childConfigs = append(childConfigs, WidgetConfig{
-						ID:      id,
-						Options: opts,
-					})
+					walk(childConfigs)
 				}
-				// recurse
-				sb.WriteString(collectWidgetScripts(registry, childConfigs, ctx))
-			}
-		} else {
-			if s, ok := w.(widgets.Scriptable); ok {
-				sb.WriteString("\n/* " + cfg.ID + " */\n")
-				sb.WriteString(s.Script())
-				sb.WriteString("\n")
+			} else if widgetIDsWithScript[w.ID] && !seen[w.ID] {
+				seen[w.ID] = true
+				ids = append(ids, w.ID)
 			}
 		}
 	}
-	return sb.String()
+	walk(configs)
+	return ids
 }
 
 // ── serveIndex ───────────────────────────────────────────────
@@ -259,7 +268,7 @@ func serveIndex(w http.ResponseWriter, r *http.Request) {
 
 	// ── Render widgets and collect HTML ──
 	widgetMap := make(map[string]template.HTML)
-	var allConfigs []WidgetConfig // flat list of top-level widgets for script collection
+	var allConfigs []WidgetConfig
 	widgetIndex := 0
 
 	for _, col := range cfg.Columns {
@@ -272,8 +281,6 @@ func serveIndex(w http.ResponseWriter, r *http.Request) {
 				widgetIndex++
 				continue
 			}
-			// Use a unique key per instance so duplicate widget types
-			// (e.g., two split-column widgets) don't overwrite each other
 			key := fmt.Sprintf("%s-%d", wCfg.ID, widgetIndex)
 			widgetIndex++
 
@@ -288,8 +295,8 @@ func serveIndex(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// ── Collect scripts recursively ──
-	widgetScripts := collectWidgetScripts(registry, allConfigs, ctx)
+	// ── Collect active widget IDs for loading their JS ──
+	activeWidgetIDs := collectActiveWidgetIDs(allConfigs)
 
 	// ── Columns for template ──
 	type tmplWidget struct{ ID, Key string }
@@ -511,7 +518,7 @@ func serveIndex(w http.ResponseWriter, r *http.Request) {
 		Columns           []tmplColumn
 		GridCols          string
 		InitialData       template.JS
-		WidgetScripts     template.JS
+		ActiveWidgetIDs   []string
 		ThemeCSSLinks     template.HTML
 		FooterHTML        template.HTML
 	}{
@@ -532,7 +539,7 @@ func serveIndex(w http.ResponseWriter, r *http.Request) {
 		Columns:           tmplCols,
 		GridCols:          gridCols,
 		InitialData:       template.JS(jsonInitial),
-		WidgetScripts:     template.JS(widgetScripts),
+		ActiveWidgetIDs:   activeWidgetIDs,
 		ThemeCSSLinks:     template.HTML(themeCSSLinks.String()),
 		FooterHTML:        template.HTML(footerHTML.String()),
 	}

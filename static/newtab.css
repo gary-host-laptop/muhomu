@@ -1,3 +1,22 @@
+/* ── @font-face declarations ─────────────────────────────── */
+
+@font-face {
+    font-family: "DotGothic16";
+    src: url("assets/fonts/DotGothic16-Regular.ttf") format("truetype");
+}
+
+@font-face {
+    font-family: "Orbitron";
+    src: url("assets/fonts/Orbitron-VariableFont_wght.ttf") format("truetype");
+}
+
+@font-face {
+    font-family: "Inter";
+    src: url("/static/assets/fonts/Inter-VariableFont_opsz,wght.ttf")
+        format("truetype-variations");
+    font-weight: 100 900;
+}
+
 /* Reset / Base */
 *,
 *::before,
@@ -154,11 +173,11 @@ body.font-orbitron #clock {
     font-size: 82px;
 }
 
-/* Clock color mode overrides */
-#clock.force-light {
+/* Clock color force override — when clock_theme is set to light or dark */
+body.clock-force-light #clock {
     color: #e8e8f0;
 }
-#clock.force-dark {
+body.clock-force-dark #clock {
     color: #1a1a24;
 }
 
@@ -196,8 +215,8 @@ body.font-orbitron .timer-sep {
 }
 
 .bin-bit.on {
-    background: var(--greeting-accent, var(--accent2));
-    box-shadow: 0 0 6px var(--greeting-accent, var(--accent2));
+    background: var(--accent2);
+    box-shadow: 0 0 6px var(--accent2);
 }
 .bin-bit.off {
     background: var(--border);
@@ -261,6 +280,18 @@ body.font-orbitron .timer-sep {
     font-size: 14px;
     color: var(--white);
     letter-spacing: 0.01em;
+}
+
+#profile-tagline {
+    font-size: 10px;
+    color: var(--dimmer);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    max-width: 180px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    text-align: right;
 }
 
 /* Header buttons */
@@ -781,9 +812,6 @@ body.edit-mode .folder-head-btns {
     background: var(--hover-dim);
 }
 
-.quick-links a .ql-icon {
-    display: none;
-}
 .quick-links a img.ql-fav {
     width: 16px;
     height: 16px;
@@ -830,34 +858,6 @@ body.edit-mode .qa-btn-group {
 
 #notes::placeholder {
     color: var(--dimmer);
-}
-
-/* Status block */
-.status-rows {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-}
-
-.status-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    font-size: 13px;
-    padding: 4px 0;
-    border-bottom: 1px solid var(--border);
-}
-
-.status-row:last-child {
-    border-bottom: none;
-}
-.status-row .label {
-    color: var(--dimmer);
-    letter-spacing: 1px;
-    text-transform: uppercase;
-}
-.status-row .value {
-    color: var(--white);
 }
 
 /* Recently visited */
@@ -1881,72 +1881,6 @@ td.today:hover::after {
 .connector-col4 {
     border-bottom: 1px solid var(--border);
     min-width: 1.8em;
-    height: 0.2em;
-    padding: 0;
-}
-
-.footer-text-col1-3 {
-    text-align: left;
-    padding-left: 0.3em;
-    border-right: 1px solid var(--border);
-    font-size: 0.85em;
-    line-height: 1.2;
-    vertical-align: middle;
-    padding-top: 0.1em;
-    padding-bottom: 0.1em;
-    font-family: var(--font-doto), monospace;
-    font-weight: 700;
-    letter-spacing: 1px;
-    color: var(--dim);
-}
-.footer-spacer {
-    padding: 0;
-    width: 1.2em;
-    min-width: 1.2em;
-}
-.footer-sep-line {
-    border-bottom: 1px solid var(--border);
-    border-right: 1px solid var(--border);
-    height: 0.2em;
-    padding: 0;
-}
-.footer-sep-spacer {
-    padding: 0;
-    width: 1.2em;
-    min-width: 1.2em;
-}
-
-.month-box-col1 {
-    min-width: 2.8em;
-}
-.month-box-col2 {
-    min-width: 1.8em;
-}
-.month-box-top {
-    border-top: 1px solid var(--border);
-    border-left: 1px solid var(--border);
-    border-right: 1px solid var(--border);
-    height: 0.2em;
-    padding: 0;
-}
-.month-box-mid {
-    border-left: 1px solid var(--border);
-    border-right: 1px solid var(--border);
-    text-align: center;
-    padding: 0.1em 0.3em;
-}
-.month-number-large {
-    font-family: var(--font-doto), monospace;
-    font-size: 1.3em;
-    line-height: 1.2;
-    font-weight: 700;
-    color: var(--white);
-    letter-spacing: 2px;
-}
-.month-box-bot {
-    border-bottom: 1px solid var(--border);
-    border-left: 1px solid var(--border);
-    border-right: 1px solid var(--border);
     height: 0.2em;
     padding: 0;
 }
