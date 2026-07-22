@@ -25,13 +25,13 @@ func (w *QuoteWidget) Render(ctx RenderContext) (template.HTML, error) {
 	}
 	inner := fmt.Sprintf(
 		`<div class="widget-body" style="padding:8px"><blockquote class="quote-block">
-  <p id="quote-text">%s</p>
-  <footer id="quote-author">%s</footer>
+  <p data-fetch-key="text">%s</p>
+  <footer data-fetch-key="author">%s</footer>
 </blockquote></div>`,
 		htmlEscape(qText), htmlEscape(qAuth),
 	)
 	return wrap(ctx, "quote", "名言",
-		`<button class="wt-act" id="quote-next"><i class="ph-light ph-caret-right"></i></button>`,
+		`<button class="wt-act" data-preload="/api/quote/random" data-preload-render="render_quote" data-preload-init="quote_preload_init"><i class="ph-light ph-caret-right"></i></button>`,
 		inner), nil
 }
 

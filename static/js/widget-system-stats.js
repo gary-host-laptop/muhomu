@@ -1,3 +1,4 @@
+/* System stats — canvas graph of CPU/RAM history, polls /api/stats every 2s */
 (function(){
   const canvas=document.getElementById("stats-canvas");
   if(!canvas)return;

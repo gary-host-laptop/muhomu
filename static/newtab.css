@@ -1631,7 +1631,6 @@ body.edit-mode .fav-tile.drag-over {
     color: var(--accent3);
 }
 
-/* RSS pagination */
 .rss-page {
     display: none;
 }

@@ -1,3 +1,4 @@
+/* Notes widget — auto-saving textarea, saves via Store.set on input */
 (function(){
   const notesEl=document.getElementById("notes");
   if(!notesEl)return;

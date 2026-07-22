@@ -208,6 +208,8 @@ func (w *RSSWidget) Render(ctx RenderContext) (template.HTML, error) {
 		containerClass = "rss-horizontal"
 	}
 
+	sb.WriteString(`<div data-pager-wrap>`)
+
 	for page := 0; page < totalPages; page++ {
 		start := page * itemsPerPage
 		end := start + itemsPerPage
@@ -218,7 +220,7 @@ func (w *RSSWidget) Render(ctx RenderContext) (template.HTML, error) {
 		if page == 0 {
 			activeCls = " active"
 		}
-		sb.WriteString(fmt.Sprintf(`<div class="rss-page%s" data-rss-page="%d">`, activeCls, page))
+		sb.WriteString(fmt.Sprintf(`<div data-page="%d" class="rss-page%s">`, page, activeCls))
 
 		for _, a := range allArticles[start:end] {
 			switch style {
@@ -251,14 +253,16 @@ func (w *RSSWidget) Render(ctx RenderContext) (template.HTML, error) {
 		sb.WriteString(`</div>`)
 	}
 
-	// ── Pagination nav ──
+	// ── Pagination nav with data-pager attributes ──
 	if totalPages > 1 {
-		sb.WriteString(fmt.Sprintf(`<div class="rss-pagination">`))
-		sb.WriteString(`<button class="rss-nav-btn" data-rss-dir="prev" disabled>‹ prev</button>`)
-		sb.WriteString(fmt.Sprintf(`<span class="rss-page-indicator">1 / %d</span>`, totalPages))
-		sb.WriteString(`<button class="rss-nav-btn" data-rss-dir="next">next ›</button>`)
+		sb.WriteString(`<div class="rss-pagination">`)
+		sb.WriteString(`<button class="rss-nav-btn" data-pager="prev" disabled>‹ prev</button>`)
+		sb.WriteString(fmt.Sprintf(`<span class="rss-page-indicator" data-pager-indicator>1 / %d</span>`, totalPages))
+		sb.WriteString(`<button class="rss-nav-btn" data-pager="next">next ›</button>`)
 		sb.WriteString(`</div>`)
 	}
+
+	sb.WriteString(`</div>`)
 
 	inner := fmt.Sprintf(`<div class="widget-body rss-body"><div class="%s">%s</div></div>`, containerClass, sb.String())
 	return wrap(ctx, "rss", "フィード",

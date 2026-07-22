@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -368,6 +369,7 @@ func handleWeather(w http.ResponseWriter, r *http.Request) {
 }
 
 // ── GET /api/widget-images/next ───────────────────────────────
+// Returns the next image alphabetically, wrapping around at the end.
 
 func handleWidgetImageNext(w http.ResponseWriter, r *http.Request) {
 	files := listImagesDir(appCfg.widgetImagesDir)
@@ -375,14 +377,17 @@ func handleWidgetImageNext(w http.ResponseWriter, r *http.Request) {
 		jsonErr(w, "no widget images found", 404)
 		return
 	}
+	sort.Strings(files)
 	current := filepath.Base(r.URL.Query().Get("current"))
-	candidates := make([]string, 0, len(files))
-	for _, f := range files {
-		if f != current {
-			candidates = append(candidates, f)
+	pick := files[0]
+	if current != "" {
+		for i, f := range files {
+			if f == current {
+				pick = files[(i+1)%len(files)]
+				break
+			}
 		}
 	}
-	pick := candidates[rand.Intn(len(candidates))]
 	jsonOK(w, map[string]string{
 		"url":      "/api/widget-images/files/" + pick,
 		"filename": pick,
@@ -442,22 +447,55 @@ func handleDeleteQuote(w http.ResponseWriter, r *http.Request) {
 
 // ── GET /api/quote/random ─────────────────────────────────────
 // Returns a random quote from data/quotes.yaml. Falls back to
-// DB quotes if the file has none.
+// DB quotes if the file has none. Pass ?current=text to guarantee
+// a different quote is returned.
 
 func handleQuoteRandom(w http.ResponseWriter, r *http.Request) {
+	current := strings.TrimSpace(r.URL.Query().Get("current"))
+
+	// Prefer YAML quotes, fall back to DB quotes
+	var candidates []Quote
 	if len(quotes) > 0 {
-		q := quotes[rand.Intn(len(quotes))]
-		jsonOK(w, q)
-		return
+		candidates = make([]Quote, len(quotes))
+		for i, q := range quotes {
+			candidates[i] = Quote{Text: q.Text, Author: q.Author}
+		}
+	} else {
+		var err error
+		candidates, err = getQuotes()
+		if err != nil || len(candidates) == 0 {
+			jsonErr(w, "no quotes available", 404)
+			return
+		}
 	}
-	// fallback: DB quotes
-	dbQs, err := getQuotes()
-	if err != nil || len(dbQs) == 0 {
-		jsonErr(w, "no quotes available", 404)
-		return
+
+	var pick Quote
+	if current == "" || len(candidates) <= 1 {
+		pick = candidates[rand.Intn(len(candidates))]
+	} else {
+		// Keep picking until we get a different quote
+		for i := 0; i < 20; i++ {
+			q := candidates[rand.Intn(len(candidates))]
+			if q.Text != current {
+				pick = q
+				break
+			}
+		}
+		if pick.Text == "" {
+			// Fallback: return the next one in order
+			for i, q := range candidates {
+				if q.Text == current {
+					pick = candidates[(i+1)%len(candidates)]
+					break
+				}
+			}
+			if pick.Text == "" {
+				pick = candidates[0]
+			}
+		}
 	}
-	q := dbQs[rand.Intn(len(dbQs))]
-	jsonOK(w, q)
+
+	jsonOK(w, pick)
 }
 
 // ── GET /api/kotoba/next ──────────────────────────────────────

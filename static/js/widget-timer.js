@@ -1,3 +1,4 @@
+/* Timer widget — countdown with start/pause/reset, plays alarm.mp3 */
 (function(){
   const display=document.getElementById("timer-display");
   if(!display)return;

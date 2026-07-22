@@ -175,7 +175,6 @@ var widgetIDsWithScript = map[string]bool{
 	"quote":             true,
 	"rain":              true,
 	"recently-visited":  true,
-	"rss":               true,
 	"system-stats":      true,
 	"timer":             true,
 }

@@ -1,24 +1,23 @@
-(function(){
-  const charEl=document.getElementById("kanji-char");
-  const readEl=document.getElementById("kanji-reading");
-  const meanEl=document.getElementById("kanji-meaning");
-  const levelEl=document.getElementById("kanji-level");
-  if(!charEl)return;
-  function renderWord(w){
-    charEl.innerHTML="";
-    const a=document.createElement("a");
-    a.href="https://jisho.org/search/"+encodeURIComponent(w.k)+"%20%23kanji";
-    a.style.cssText="color:inherit;text-decoration:none;";a.textContent=w.k;
-    charEl.appendChild(a);
-    if(readEl)readEl.textContent=w.r;
-    if(meanEl)meanEl.textContent=w.m;
-    if(levelEl){levelEl.textContent=w.l.toUpperCase();levelEl.className="kanji-level "+w.l;}
+/* ── widget-kotoba.js ─────────────────────────────────────────
+   Render callback for the kotoba widget. Called by preloader.js
+   on fetch complete. Updates kanji character, reading, meaning,
+   and JLPT level in the widget DOM.                             */
+function render_kotoba(w, btn) {
+  var widget = btn.closest(".widget");
+  if (!widget) return;
+  var charEl = widget.querySelector("#kanji-char");
+  if (charEl) {
+    charEl.innerHTML = "<a href='https://jisho.org/search/" +
+      encodeURIComponent(w.k) + "%20%23kanji' " +
+      "style='color:inherit;text-decoration:none;'>" + w.k + "</a>";
   }
-  document.getElementById("kanji-next")?.addEventListener("click",async()=>{
-    try{
-      const r=await fetch("/api/kotoba/next");
-      const w=await r.json();
-      renderWord(w);
-    }catch(e){}
-  });
-})();
+  var readEl = widget.querySelector("#kanji-reading");
+  if (readEl) readEl.textContent = w.r;
+  var meanEl = widget.querySelector("#kanji-meaning");
+  if (meanEl) meanEl.textContent = w.m;
+  var levelEl = widget.querySelector("#kanji-level");
+  if (levelEl) {
+    levelEl.textContent = w.l.toUpperCase();
+    levelEl.className = "kanji-level " + w.l;
+  }
+}

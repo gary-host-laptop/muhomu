@@ -1,3 +1,4 @@
+/* Quick access CRUD — state managed in __INITIAL_DATA__, saved via Store.set */
 (function(){
   if(!document.querySelector(".quick-links"))return;
   let _data=(window.__INITIAL_DATA__&&window.__INITIAL_DATA__.nt_quick)||[];

@@ -1,3 +1,4 @@
+/* Recently visited — list of saved links with quick-add form */
 (function(){
   if(!document.getElementById("recent-grid"))return;
   let _data=(window.__INITIAL_DATA__&&window.__INITIAL_DATA__.nt_recent)||[];
