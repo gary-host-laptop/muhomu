@@ -1,6 +1,7 @@
 package widgets
 
 import (
+	"encoding/json"
 	"fmt"
 	"html/template"
 	"strings"
@@ -31,7 +32,8 @@ func (w *RecentlyVisitedWidget) Render(ctx RenderContext) (template.HTML, error)
   <input type="text" id="rqa-url" placeholder="https://..." autocomplete="off" />
   <button id="rqa-btn"><span>+</span></button>
 </div></div>`)
-	return wrap(ctx, "recently-visited", "後で見る", "", sb.String()), nil
+	state, _ := json.Marshal(items)
+	return wrap(ctx, "recently-visited", "後で見る", "", sb.String(), string(state)), nil
 }
 
 

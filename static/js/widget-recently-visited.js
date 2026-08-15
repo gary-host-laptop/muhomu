@@ -1,32 +1,75 @@
-/* Recently visited — list of saved links with quick-add form */
-(function(){
-  if(!document.getElementById("recent-grid"))return;
-  let _data=(window.__INITIAL_DATA__&&window.__INITIAL_DATA__.nt_recent)||[];
-  async function save(){await Store.set("nt_recent",_data);}
-  function load(){
-    const grid=document.getElementById("recent-grid");
-    grid.innerHTML="";
-    _data.forEach((item,i)=>{
-      const tile=document.createElement("div");tile.className="recent-tile";
-      const name=document.createElement("div");name.className="rt-name";name.textContent=item.name;
-      const url=document.createElement("div");url.className="rt-url";url.textContent=item.url;
-      tile.appendChild(name);tile.appendChild(url);
-      tile.addEventListener("click",()=>{window.location.href=item.url;});
-      const x=document.createElement("button");x.className="recent-x";x.innerHTML='<i class="ph-light ph-x"></i>';
-      x.addEventListener("click",async e=>{e.stopPropagation();_data.splice(i,1);await save();load();});
-      tile.appendChild(x);grid.appendChild(tile);
+/* Recently visited — htmx-driven: quick-add / delete mutate the state
+   read from data-state, htmx POSTs it and swaps in the server-rendered
+   widget. Tiles navigate on click.                                    */
+(function() {
+  var SEL = '.widget[data-widget="recently-visited"]';
+
+  function widget() { return document.querySelector(SEL); }
+
+  function state() {
+    var root = widget();
+    if (!root || !root.dataset.state) return [];
+    try { return JSON.parse(root.dataset.state); } catch (e) { return []; }
+  }
+
+  function saveAndRender(next) {
+    if (!widget()) return;
+    htmx.ajax("POST", "/api/widget/recently-visited", {
+      values: { state: JSON.stringify(next) },
+      target: SEL,
+      swap: "outerHTML"
     });
   }
-  async function quickAdd(){
-    const name=document.getElementById("rqa-name").value.trim();
-    const url=document.getElementById("rqa-url").value.trim();
-    if(!name||!url)return;
-    _data.unshift({name,url});if(_data.length>8)_data.pop();
-    await save();
-    document.getElementById("rqa-name").value="";document.getElementById("rqa-url").value="";
-    load();
+
+  function init() {
+    var root = widget();
+    if (!root || root.dataset.hxInit === "1") return;
+    root.dataset.hxInit = "1";
+
+    var grid = root.querySelector("#recent-grid");
+    if (grid) {
+      grid.querySelectorAll(".recent-tile").forEach(function(tile, i) {
+        tile.addEventListener("click", function() {
+          var item = state()[i];
+          if (item && item.url) window.location.href = item.url;
+        });
+        var x = tile.querySelector(".recent-x");
+        x.addEventListener("click", async function(e) {
+          e.stopPropagation();
+          var next = state();
+          next.splice(i, 1);
+          saveAndRender(next);
+        });
+      });
+    }
+
+    var nameInp = root.querySelector("#rqa-name");
+    var urlInp = root.querySelector("#rqa-url");
+    var btn = root.querySelector("#rqa-btn");
+
+    async function quickAdd() {
+      var name = (nameInp && nameInp.value.trim()) || "";
+      var url = (urlInp && urlInp.value.trim()) || "";
+      if (!name || !url) return;
+      var next = state();
+      next.unshift({ name: name, url: url });
+      if (next.length > 8) next.pop();
+      saveAndRender(next);
+      if (nameInp) nameInp.value = "";
+      if (urlInp) urlInp.value = "";
+    }
+    if (btn) btn.addEventListener("click", quickAdd);
+    if (urlInp) urlInp.addEventListener("keydown", function(e) {
+      if (e.key === "Enter") quickAdd();
+    });
   }
-  document.getElementById("rqa-btn")?.addEventListener("click",quickAdd);
-  document.getElementById("rqa-url")?.addEventListener("keydown",e=>{if(e.key==="Enter")quickAdd();});
-  load();
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", init);
+  } else {
+    init();
+  }
+  document.addEventListener("htmx:load", function(e) {
+    if (e.target.matches && e.target.matches(SEL)) init();
+  });
 })();

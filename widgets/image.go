@@ -3,6 +3,7 @@ package widgets
 import (
 	"fmt"
 	"html/template"
+	"net/url"
 	"os"
 	"path/filepath"
 	"sort"
@@ -16,10 +17,10 @@ var allowedImgExts = map[string]bool{
 	".webp": true, ".gif": true, ".avif": true,
 }
 
-func firstWidgetImage(dir string) string {
+func listWidgetImages(dir string) []string {
 	entries, err := os.ReadDir(dir)
 	if err != nil {
-		return ""
+		return nil
 	}
 	var files []string
 	for _, e := range entries {
@@ -27,31 +28,55 @@ func firstWidgetImage(dir string) string {
 			files = append(files, e.Name())
 		}
 	}
-	if len(files) == 0 {
-		return ""
-	}
 	sort.Strings(files)
-	return "/api/widget-images/files/" + files[0]
+	return files
+}
+
+// nextWidgetImage returns the serving URL and filename of the image that
+// follows current alphabetically, wrapping around at the end. With an
+// empty or unknown current it returns the first image.
+func nextWidgetImage(dir, current string) (string, string) {
+	files := listWidgetImages(dir)
+	if len(files) == 0 {
+		return "", ""
+	}
+	idx := 0
+	if current != "" {
+		for i, f := range files {
+			if f == current {
+				idx = (i + 1) % len(files)
+				break
+			}
+		}
+	}
+	return "/api/widget-images/files/" + files[idx], files[idx]
 }
 
 func (w *ImageWidget) ID() string { return "image" }
 
 func (w *ImageWidget) Render(ctx RenderContext) (template.HTML, error) {
-	imageURL := firstWidgetImage(ctx.WidgetImageDir)
-	imgHTML := ""
+	imageURL, filename := nextWidgetImage(ctx.WidgetImageDir, ctx.Query["current"])
+
+	inner := `<div class="widget-img-inner">
+  <div class="widget-img-wrap" id="widget-img-wrap"></div>
+</div>`
+	acts := `<button class="wt-act" id="widget-img-next" title="next image" disabled><i class="ph-light ph-caret-right"></i></button>`
+
 	if imageURL != "" {
-		filename := imageURL[strings.LastIndex(imageURL, "/")+1:]
-		imgHTML = fmt.Sprintf(
-			`<img src="%s" alt="" id="widget-img" class="active" data-filename="%s">`,
-			imageURL, filename,
+		inner = fmt.Sprintf(`<div class="widget-img-inner">
+  <div class="widget-img-wrap" id="widget-img-wrap"><img src="%s" alt="" id="widget-img" class="active" data-filename="%s"></div>
+</div>`, htmlEscape(imageURL), filename)
+		// The next button carries the current filename so the server can
+		// step to the following image. A prefetch link warms the cache for
+		// the image after that, keeping clicks instant without client JS.
+		acts = fmt.Sprintf(
+			`<button class="wt-act" id="widget-img-next" title="next image" hx-get="/api/widget/image?current=%s" hx-target="closest .widget" hx-swap="outerHTML"><i class="ph-light ph-caret-right"></i></button>`,
+			url.QueryEscape(filename),
 		)
+		if nextURL, _ := nextWidgetImage(ctx.WidgetImageDir, filename); nextURL != "" {
+			inner += fmt.Sprintf(`<link rel="prefetch" href="%s">`, htmlEscape(nextURL))
+		}
 	}
-	inner := fmt.Sprintf(`<div class="widget-img-inner">
-  <div class="widget-img-wrap" id="widget-img-wrap">%s</div>
-</div>`, imgHTML)
-	return wrap(ctx, "image", "イメージ",
-		`<button class="wt-act" id="widget-img-next" title="next image"><i class="ph-light ph-caret-right"></i></button>`,
-		inner), nil
+
+	return wrap(ctx, "image", "イメージ", acts, inner), nil
 }
-
-

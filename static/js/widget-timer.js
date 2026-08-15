@@ -7,7 +7,22 @@
   const startBtn=document.getElementById("timer-start");
   const resetBtn=document.getElementById("timer-reset");
   let alarm=null;
-  function getAlarm(){if(!alarm)alarm=new Audio("/static/assets/sounds/alarm.mp3");return alarm;}
+  function getAlarm(){
+    if(!alarm){
+      alarm=new Audio("/static/assets/sounds/alarm.mp3");
+      alarm.addEventListener("ended",releaseAlarm);
+    }
+    return alarm;
+  }
+  // Drops the decoded alarm buffer as soon as it has rung (or is reset),
+  // so the ~1 MB PCM doesn't linger for the rest of the session.
+  function releaseAlarm(){
+    if(!alarm)return;
+    alarm.pause();
+    alarm.removeAttribute("src");
+    alarm.load();
+    alarm=null;
+  }
   let total=0,remaining=0,interval=null,running=false;
   function pad(n){return String(n).padStart(2,"0");}
   function render(secs){
@@ -35,7 +50,7 @@
     },1000);
   });
   resetBtn.addEventListener("click",()=>{
-    stop();if(alarm){alarm.pause();alarm.currentTime=0;}
+    stop();releaseAlarm();
     remaining=0;render(0);minInput.value=0;secInput.value=0;
     display.classList.remove("urgent");
   });

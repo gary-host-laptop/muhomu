@@ -67,3 +67,6 @@
 .ph-light.ph-spinner:before {
     content: "\e66a";
 }
+.ph-light.ph-folder:before {
+    content: "\e24a";
+}

@@ -21,6 +21,22 @@ type ConfigQuote struct {
 	Author string
 }
 
+// StatsPoint is one sample of CPU/RAM percentages.
+type StatsPoint struct {
+	CPU float64
+	RAM float64
+}
+
+// SystemStats is a snapshot of the machine's current statistics,
+// populated by the coordinator for the system-stats widget.
+type SystemStats struct {
+	CPU     float64 // percent
+	RAM     float64 // percent
+	RX      float64 // download KB/s
+	TX      float64 // upload KB/s
+	History []StatsPoint
+}
+
 // RenderContext carries the material conditions available to each widget
 // at render time. Widgets take only what they need from this context.
 type RenderContext struct {
@@ -38,6 +54,14 @@ type RenderContext struct {
 	DefaultLED     string
 	ConfigQuotes   []ConfigQuote
 	Options        map[string]interface{}
+	// Stats carries the latest system statistics snapshot for the
+	// system-stats widget. Set by the coordinator at render time.
+	Stats SystemStats
+	// Query carries per-request query parameters. It is set by the widget
+	// fragment endpoints (htmx) so a widget can vary its render — e.g. the
+	// image widget steps sequentially from ?current=, the quote widget
+	// avoids repeating the ?current= quote.
+	Query map[string]string
 }
 
 // Widget is the interface every widget implements. Its two methods
@@ -82,7 +106,11 @@ func Registry() map[string]Widget {
 //  1. Per-widget "led" option in ctx.Options
 //  2. Global ctx.DefaultLED (from config's default_led)
 //  3. Fallback: var(--accent)
-func wrap(ctx RenderContext, id, label, acts, inner string) template.HTML {
+//
+// An optional sixth argument embeds a JSON blob as data-state on the
+// widget root, so client JS can read the widget's data model after
+// server-side re-renders (the widget remains the single source of truth).
+func wrap(ctx RenderContext, id, label, acts, inner string, states ...string) template.HTML {
 	ledColor := ctx.DefaultLED
 	if ledColor == "" {
 		ledColor = "var(--accent)"
@@ -90,8 +118,12 @@ func wrap(ctx RenderContext, id, label, acts, inner string) template.HTML {
 	if c, ok := ctx.Options["led"].(string); ok && c != "" {
 		ledColor = c
 	}
+	stateAttr := ""
+	if len(states) > 0 && states[0] != "" {
+		stateAttr = ` data-state="` + htmlEscape(states[0]) + `"`
+	}
 	return template.HTML(`
-<div class="widget" data-widget="` + id + `">
+<div class="widget" data-widget="` + id + `"` + stateAttr + `>
   <div class="widget-title">
     <div class="led" style="--led-color:` + ledColor + `"></div>
     <span class="wt-label" data-widget-label="` + id + `">` + label + `</span>

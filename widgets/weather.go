@@ -4,15 +4,37 @@ import (
 	"encoding/json"
 	"fmt"
 	"html/template"
+	"io"
 	"net/http"
+	"sync"
 	"time"
 )
+
+// ── Weather cache (on-the-hour) ───────────────────────────────
+// Glance caches weather until the start of the next hour.
+// Forecast data doesn't change minute-to-minute, so one fetch per
+// hour is more than enough and avoids rate limits.
+type cachedWeather struct {
+	data      []byte
+	expiresAt time.Time
+}
+
+var (
+	weatherCache   = map[string]*cachedWeather{}
+	weatherCacheMu sync.Mutex
+)
+
+// nextHour returns the start of the next calendar hour.
+func nextHour() time.Time {
+	now := time.Now()
+	return time.Date(now.Year(), now.Month(), now.Day(), now.Hour()+1, 0, 0, 0, now.Location())
+}
 
 type WeatherWidget struct{}
 
 func (w *WeatherWidget) ID() string { return "weather" }
 
-// openMeteoCurrent is the subset of the Open-Meteo API we care about.
+// openMeteoResponse is the subset of the Open-Meteo API we care about.
 type openMeteoResponse struct {
 	CurrentUnits struct {
 		Temperature string `json:"temperature_2m"`
@@ -24,9 +46,9 @@ type openMeteoResponse struct {
 		WeatherCode   int     `json:"weather_code"`
 	} `json:"current"`
 	Daily struct {
-		TempMax []float64 `json:"temperature_2m_max"`
-		TempMin []float64 `json:"temperature_2m_min"`
-		WeatherCode []int `json:"weather_code"`
+		TempMax     []float64 `json:"temperature_2m_max"`
+		TempMin     []float64 `json:"temperature_2m_min"`
+		WeatherCode []int     `json:"weather_code"`
 	} `json:"daily"`
 }
 
@@ -36,12 +58,27 @@ func (w *WeatherWidget) Render(ctx RenderContext) (template.HTML, error) {
 	city := ctx.LocationCity
 
 	if lat == "" || lon == "" {
-		// No location configured — show empty state
 		return wrap(ctx, "weather", "天気", "",
 			`<div class="widget-body"><div class="weather-empty">no location set</div></div>`), nil
 	}
 
-	// Fetch from Open-Meteo
+	cacheKey := lat + "," + lon
+
+	// ── Try cache first ──
+	weatherCacheMu.Lock()
+	cached := weatherCache[cacheKey]
+	if cached != nil && time.Now().Before(cached.expiresAt) {
+		weatherCacheMu.Unlock()
+		var data openMeteoResponse
+		if err := json.Unmarshal(cached.data, &data); err == nil {
+			return renderWeather(ctx, data, city), nil
+		}
+		// corrupted cache — fall through to fetch
+	} else {
+		weatherCacheMu.Unlock()
+	}
+
+	// ── Cache miss or expired — fetch from Open-Meteo ──
 	url := fmt.Sprintf(
 		"https://api.open-meteo.com/v1/forecast?latitude=%s&longitude=%s"+
 			"&current=temperature_2m,apparent_temperature,weather_code"+
@@ -58,13 +95,31 @@ func (w *WeatherWidget) Render(ctx RenderContext) (template.HTML, error) {
 	}
 	defer resp.Body.Close()
 
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return wrap(ctx, "weather", "天気", "",
+			`<div class="widget-body"><div class="weather-empty">fetch failed</div></div>`), nil
+	}
+
+	// Cache the raw response until the next hour
+	weatherCacheMu.Lock()
+	weatherCache[cacheKey] = &cachedWeather{
+		data:      body,
+		expiresAt: nextHour(),
+	}
+	weatherCacheMu.Unlock()
+
 	var data openMeteoResponse
-	if err := json.NewDecoder(resp.Body).Decode(&data); err != nil {
+	if err := json.Unmarshal(body, &data); err != nil {
 		return wrap(ctx, "weather", "天気", "",
 			`<div class="widget-body"><div class="weather-empty">parse failed</div></div>`), nil
 	}
 
-	// ── Build display data ──
+	return renderWeather(ctx, data, city), nil
+}
+
+// renderWeather builds the weather widget HTML from parsed data.
+func renderWeather(ctx RenderContext, data openMeteoResponse, city string) template.HTML {
 	unit := "°C"
 	if data.CurrentUnits.Temperature == "°F" {
 		unit = "°F"
@@ -101,7 +156,7 @@ func (w *WeatherWidget) Render(ctx RenderContext) (template.HTML, error) {
   %s
 </div></div>`, temp, condition, feelsLike, hilo, locationLine)
 
-	return wrap(ctx, "weather", "天気", "", inner), nil
+	return wrap(ctx, "weather", "天気", "", inner)
 }
 
 // wmoWeatherDescription maps WMO weather codes to human-readable strings.

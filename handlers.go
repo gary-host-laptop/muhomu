@@ -3,7 +3,7 @@ package main
 import (
 	"bufio"
 	"encoding/json"
-	"log"
+	"fmt"
 	"math/rand"
 	"net/http"
 	"os"
@@ -16,44 +16,6 @@ import (
 
 	"muhomu/widgets"
 )
-
-// ── fetchUserData ─────────────────────────────────────────────
-// Fetches only user-produced content from the db concurrently.
-// Configuration is read from cfg, not here.
-func fetchUserData() (map[string]interface{}, error) {
-	var wg sync.WaitGroup
-	var mu sync.Mutex
-	result := make(map[string]interface{})
-
-	fetches := []struct {
-		key string
-		fn  func() (interface{}, error)
-	}{
-		{"notes",     func() (interface{}, error) { return getNotes() }},
-		{"bookmarks", func() (interface{}, error) { return getBookmarks() }},
-		{"quick",     func() (interface{}, error) { return getQuickAccess() }},
-		{"recent",    func() (interface{}, error) { return getRecent() }},
-		{"quotes",    func() (interface{}, error) { return getQuotes() }},
-	}
-
-	for _, f := range fetches {
-		wg.Add(1)
-		go func(key string, fn func() (interface{}, error)) {
-			defer wg.Done()
-			val, err := fn()
-			if err != nil {
-				log.Printf("fetchUserData: error fetching %s: %v", key, err)
-				return
-			}
-			mu.Lock()
-			result[key] = val
-			mu.Unlock()
-		}(f.key, f.fn)
-	}
-
-	wg.Wait()
-	return result, nil
-}
 
 // ── system stats ──────────────────────────────────────────────
 var (
@@ -73,7 +35,13 @@ var (
 		cpu, ram, rx, tx float64
 	}
 	statsHistory []statsPoint
-	statsMax     = 30
+	// statsMax is the ring size: 30 visible slots + 1 extra point that the
+	// system-stats widget renders one slot off-screen right. At each swap
+	// the fresh line is then pixel-identical to the previous frame's
+	// resting position, so the CSS scroll glide can slide the newest point
+	// in from the right while the oldest slides off-screen left — no point
+	// is ever dropped at a swap (see statsGraph in widgets/system_stats.go).
+	statsMax = 31
 )
 
 // startStatsCollector launches a background goroutine that polls
@@ -180,20 +148,68 @@ func getNetSpeeds() (rx, tx float64) {
 	return rx, tx
 }
 
-func handleStats(w http.ResponseWriter, r *http.Request) {
+// currentSystemStats returns a consistent snapshot of the latest stats
+// (values + history) under the stats lock, for the system-stats widget.
+func currentSystemStats() widgets.SystemStats {
 	statsMu.RLock()
-	cpu := statsCurrent.cpu
-	ram := statsCurrent.ram
-	rx := statsCurrent.rx
-	tx := statsCurrent.tx
-	history := make([]statsPoint, len(statsHistory))
-	copy(history, statsHistory)
-	statsMu.RUnlock()
+	defer statsMu.RUnlock()
+	hist := make([]widgets.StatsPoint, len(statsHistory))
+	for i, p := range statsHistory {
+		hist[i] = widgets.StatsPoint{CPU: p.CPU, RAM: p.RAM}
+	}
+	return widgets.SystemStats{
+		CPU:     statsCurrent.cpu,
+		RAM:     statsCurrent.ram,
+		RX:      statsCurrent.rx,
+		TX:      statsCurrent.tx,
+		History: hist,
+	}
+}
 
-	jsonOK(w, map[string]interface{}{
-		"cpu": cpu, "ram": ram, "rx": rx, "tx": tx,
-		"history": history,
-	})
+// ── footer stats fragment (htmx) ──────────────────────────────
+// The page footer's live stats row (net up/down speeds, cpu, ram)
+// polls this endpoint every 2s via hx-get. It renders the same spans
+// serveIndex produces but with current values — the footer is fully
+// server-rendered and needs no client JS.
+
+func fmtFooterSpeed(kbps float64) string {
+	if kbps >= 1024 {
+		return fmt.Sprintf("%.1f MB/s", kbps/1024)
+	}
+	return fmt.Sprintf("%.1f KB/s", kbps)
+}
+
+func buildFooterHTML(footerItems []string, s widgets.SystemStats) string {
+	var b strings.Builder
+	for i, item := range footerItems {
+		if i > 0 {
+			b.WriteString(`<span class="fi-sep">·</span>`)
+		}
+		switch item {
+		case "rx":
+			fmt.Fprintf(&b, `<span class="fi-item fi-rx" id="fi-rx">⬇ %s</span>`, fmtFooterSpeed(s.RX))
+		case "tx":
+			fmt.Fprintf(&b, `<span class="fi-item fi-tx" id="fi-tx">⬆ %s</span>`, fmtFooterSpeed(s.TX))
+		case "cpu":
+			fmt.Fprintf(&b, `<span class="fi-item fi-cpu" id="fi-cpu">◉ cpu %.1f%%</span>`, s.CPU)
+		case "ram":
+			fmt.Fprintf(&b, `<span class="fi-item fi-ram" id="fi-ram">◉ ram %.0f%%</span>`, s.RAM)
+		case "version":
+			// spacer before version pushes it to the right
+			if i > 0 {
+				b.WriteString(`<span class="fi-spacer"></span>`)
+			}
+			b.WriteString(`<span class="fi-version">v1.1.1</span>`)
+		}
+	}
+	return b.String()
+}
+
+func handleFooterStats(w http.ResponseWriter, r *http.Request) {
+	out := buildFooterHTML(cfg.FooterItems, currentSystemStats())
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	w.Header().Set("Cache-Control", "no-store")
+	w.Write([]byte(out))
 }
 
 func jsonOK(w http.ResponseWriter, data interface{}) {
@@ -205,112 +221,6 @@ func jsonErr(w http.ResponseWriter, msg string, code int) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(code)
 	json.NewEncoder(w).Encode(map[string]string{"error": msg})
-}
-
-// ── GET /api/data ─────────────────────────────────────────────
-// Returns only user-produced data. Configuration is in config.yaml
-// and is not served through this endpoint.
-
-func handleGetData(w http.ResponseWriter, r *http.Request) {
-	data, err := fetchUserData()
-	if err != nil {
-		jsonErr(w, "failed to fetch data", 500)
-		return
-	}
-	jsonOK(w, map[string]interface{}{
-		"nt_notes":     data["notes"],
-		"nt_bookmarks": data["bookmarks"],
-		"nt_quick":     data["quick"],
-		"nt_recent":    data["recent"],
-		"nt_quotes":    data["quotes"],
-	})
-}
-
-// ── POST /api/data ────────────────────────────────────────────
-// Accepts mutations to user-produced data only.
-
-func handlePostData(w http.ResponseWriter, r *http.Request) {
-	var body map[string]json.RawMessage
-	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-		jsonErr(w, "invalid json", 400)
-		return
-	}
-
-	for key, raw := range body {
-		switch key {
-		case "nt_notes":
-			var content string
-			if err := json.Unmarshal(raw, &content); err != nil {
-				log.Printf("handlePostData: unmarshal nt_notes: %v", err)
-			} else {
-				setNotes(content)
-			}
-
-		case "nt_bookmarks":
-			var folders []BookmarkFolder
-			if err := json.Unmarshal(raw, &folders); err != nil {
-				log.Printf("handlePostData: unmarshal nt_bookmarks: %v | raw: %.200s", err, string(raw))
-			} else {
-				go func(f []BookmarkFolder) {
-					dir := appCfg.faviconDir
-					changed := false
-					for fi, folder := range f {
-						for li, link := range folder.Links {
-							local := cacheFaviconForLink(link.Label, link.URL, link.Fav, dir)
-							if local != link.Fav {
-								f[fi].Links[li].Fav = local
-								changed = true
-							}
-						}
-					}
-					if err := setBookmarks(f); err != nil {
-						log.Printf("handlePostData: setBookmarks: %v", err)
-					} else if changed {
-						invalidateCache()
-					}
-				}(folders)
-				log.Printf("handlePostData: saving %d bookmark folders", len(folders))
-			}
-
-		case "nt_quick":
-			var items []QuickItem
-			if err := json.Unmarshal(raw, &items); err != nil {
-				log.Printf("handlePostData: unmarshal nt_quick: %v", err)
-			} else {
-				go func(it []QuickItem) {
-					dir := appCfg.faviconDir
-					changed := false
-					for i, item := range it {
-						local := cacheFaviconForLink(item.Label, item.URL, item.Favicon, dir)
-						if local != item.Favicon {
-							it[i].Favicon = local
-							changed = true
-						}
-					}
-					if err := setQuickAccess(it); err != nil {
-						log.Printf("handlePostData: setQuickAccess: %v", err)
-					} else if changed {
-						invalidateCache()
-					}
-				}(items)
-			}
-
-		case "nt_recent":
-			var items []RecentItem
-			if err := json.Unmarshal(raw, &items); err != nil {
-				log.Printf("handlePostData: unmarshal nt_recent: %v", err)
-			} else {
-				setRecent(items)
-			}
-
-		default:
-			// silently ignore — no longer accept arbitrary kv settings
-			log.Printf("handlePostData: ignoring unknown key %q (config.yaml owns this)", key)
-		}
-	}
-
-	invalidateCache()
-	jsonOK(w, map[string]string{"ok": "true"})
 }
 
 // ── GET /api/bookmarks/search?q= ──────────────────────────────

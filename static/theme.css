@@ -90,14 +90,12 @@ body.theme-light.edit-mode #edit-toggle {
 
 body.theme-light .wt-act,
 body.theme-light .wt-btn,
-body.theme-light .folder-head-btn,
 body.theme-light .qa-edit,
 body.theme-light .tile-edit {
     color: var(--dim);
 }
 body.theme-light .wt-act:hover,
 body.theme-light .wt-btn:hover,
-body.theme-light .folder-head-btn:hover,
 body.theme-light .qa-edit:hover,
 body.theme-light .tile-edit:hover {
     color: var(--white);

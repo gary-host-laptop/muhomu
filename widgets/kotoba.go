@@ -120,7 +120,7 @@ func (w *KotobaWidget) Render(ctx RenderContext) (template.HTML, error) {
   <div class="kanji-meaning" id="kanji-meaning">%s</div>
 </div>`, word.K, word.K, word.R, word.L, word.L, word.M)
 	return wrap(ctx, "kotoba", "言葉",
-		`<button class="wt-act" data-preload="/api/kotoba/next" data-preload-render="render_kotoba"><i class="ph-light ph-caret-right"></i></button>`,
+		`<button class="wt-act" hx-get="/api/widget/kotoba" hx-target="closest .widget" hx-swap="outerHTML" title="next word"><i class="ph-light ph-caret-right"></i></button>`,
 		inner), nil
 }
 

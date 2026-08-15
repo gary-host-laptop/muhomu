@@ -83,6 +83,7 @@ a:hover {
 .page {
     position: relative;
     z-index: 3;
+    min-height: calc(100vh - 2px);
     max-width: 1400px;
     margin: 0 auto;
     padding: 24px 20px 40px;
@@ -430,7 +431,9 @@ body.edit-mode #edit-toggle {
     display: grid;
     grid-template-columns: var(--grid-cols, 1fr);
     gap: 14px;
-    align-items: start;
+    /* stretch: every column shares the row height, so widget groups end
+       on a common line and leftover space pools at the bottom edge. */
+    align-items: stretch;
     width: 100%;
 }
 
@@ -577,87 +580,230 @@ body.edit-mode .wt-btn {
     display: block;
 }
 
-/* Folders */
-.folder-list {
+/* Folders — the bookmarks widget body is CONTENT-SIZED up to a cap
+   (--bm-rows of tiles), then scrolls internally. Short views — a root
+   with few folders, a folder with a few links — are exactly as tall as
+   their content, so there is no blank space; long views stop at the cap
+   and the grid scrolls. Because overflow scrolls rather than cuts,
+   clipping is impossible and the cap does not need to be pixel-exact.
+   Tune --bm-rows: more rows = taller widget before it scrolls. */
+.widget[data-widget="bookmarks"] {
+    /* No backdrop-filter on this widget: Firefox re-rasterizes a
+       backdrop-filtered + clip-path'd element whenever htmx replaces
+       it (outerHTML swap on every folder entry/exit), and that
+       re-rasterization is a known Firefox source of compositing
+       flash — a tile ghosted at widget scale, plus white edge
+       artifacts around the box. The 2px blur is visually inert over
+       the flat page background, so dropping it costs nothing and
+       removes the flash trigger. (The .bm-swap-in fade was removed
+       for the same reason: an opacity animation on the swapped
+       element re-composites it every frame.)
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+
+    /* Tile row pitch, as authored parts — used only to express the cap
+       in row units. Every term is an explicit CSS length or an explicit
+       line-height multiplier, so it's identical on any browser/OS (font
+       metrics only matter with line-height: normal). Exactness no
+       longer matters: content under the cap fits naturally, content
+       over it scrolls. */
+    --bm-border: 1px;
+    --bm-pad-t: 10px;
+    --bm-pad-b: 8px;
+    --bm-icon: 32px;
+    --bm-gap-in: 6px; /* intra-tile gap (icon ↔ label) */
+    --bm-label-h: 16px; /* 12px font × 1.3 line-height = 15.6, rounded up */
+    --bm-tile-h: calc(
+        var(--bm-border) * 2
+        + var(--bm-pad-t) + var(--bm-pad-b)
+        + var(--bm-icon)
+        + var(--bm-gap-in)
+        + var(--bm-label-h)
+    );
+    --bm-rows: 4; /* cap: the widget grows up to 4 rows, then scrolls */
+    --bm-gap: 6px; /* grid row/column track gap */
+    --bm-pad: 10px; /* widget-body padding */
+}
+
+.widget[data-widget="bookmarks"] .widget-body {
     display: flex;
     flex-direction: column;
-    gap: 6px;
-}
-
-details.folder {
-    border: 1px solid var(--border);
-    background: var(--panel2);
-    clip-path: polygon(
-        0 0,
-        100% 0,
-        100% calc(100% - 6px),
-        calc(100% - 10px) 100%,
-        0 100%
+    max-height: calc(
+        var(--bm-pad) * 2
+        + var(--bm-rows) * var(--bm-tile-h)
+        + (var(--bm-rows) - 1) * var(--bm-gap)
     );
+    overflow: hidden;
 }
 
-details.folder[open] {
-    border-color: var(--border-lt);
+/* (The .bm-swap-in opacity fade was removed — it animated opacity on
+   the swapped widget, forcing Firefox to re-composite the
+   backdrop-filtered element every frame, which amplified the swap
+   flash it was meant to mask.) */
+/* The root listing grows with the folder count up to the body cap, then
+   scrolls — same behavior as a long folder's links grid. */
+.folder-tiles {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(88px, 1fr));
+    gap: var(--bm-gap);
+    align-content: start;
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: var(--dim) var(--panel);
 }
 
-summary.folder-head {
+/* no folders at root — center the hint in the whole body */
+.folder-tiles:has(> .folder-empty) {
+    align-content: center;
+}
+
+/* inside a folder, the links grid is the scrollable area — it grows
+   with its content up to the body cap, then scrolls; the ".." parent
+   tile is just its first cell, so it scrolls away like any other tile */
+.widget[data-widget="bookmarks"] .folder-links.grid {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    align-content: start;
+    scrollbar-width: thin;
+    scrollbar-color: var(--dim) var(--panel);
+}
+
+/* Inside a folder the title bar reads "ブックマーク › Name" — the
+   widget's standard trailing " ›" decoration would make it a double
+   chevron, so drop it while a folder view is active. */
+.widget:has(#folder-list[data-folder]:not([data-folder="-1"])) .wt-label::after {
+    content: "";
+}
+
+.folder-name {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 100%;
+    /* explicit, matching the fav-tile labels — line-height: normal would
+       make the line box font-metric-dependent and break --bm-tile-h */
+    line-height: 1.3;
+}
+
+/* Root listing — folders as icon tiles (mirrors a fav-tile) */
+.folder-tile {
+    position: relative;
     display: flex;
+    flex-direction: column;
     align-items: center;
-    gap: 6px;
-    padding: 7px 10px;
-    cursor: pointer;
-    list-style: none;
-    font-size: 13px;
-    letter-spacing: 1px;
-    text-transform: uppercase;
+    gap: var(--bm-gap-in);
+    padding: 10px 6px 8px;
     color: var(--dim);
+    font-size: 12px;
+    letter-spacing: 0.5px;
+    text-align: center;
+    background: var(--panel2);
+    border: 1px solid transparent;
+    cursor: pointer;
     user-select: none;
-    border-left: 2px solid transparent;
     transition:
         color 0.1s,
         border-color 0.1s,
         background 0.1s;
 }
 
-summary.folder-head:hover {
-    color: var(--white);
-    border-left-color: var(--accent);
-    background: var(--hover-dim);
+.folder-tile:hover {
+    color: var(--accent);
+    background: var(--hover-subtle);
+    border-left: 1px solid var(--accent);
 }
 
-summary.folder-head::-webkit-details-marker {
-    display: none;
+.folder-tile:focus-visible {
+    outline: 1px solid var(--accent);
+    outline-offset: -1px;
 }
 
-summary.folder-head::before {
-    content: "▸";
-    color: var(--dimmer);
-    font-size: 10px;
-    transition: transform 0.15s;
+/* Folder glyph — Phosphor-Light. The repo ships the full icon font;
+   phosphor-light.css just lists the classes in use. Font-size 32px gives
+   the same 32px line box as the fav-tile images, so folder tiles and
+   fav tiles share one row pitch (--bm-tile-h). */
+.folder-tile .ph-folder {
+    font-size: 32px;
+    line-height: 1;
+    color: var(--dim);
     flex-shrink: 0;
+    transition: color 0.1s;
 }
 
-details[open] > summary.folder-head::before {
-    content: "▾";
+.folder-tile:hover .ph-folder {
+    color: var(--accent);
 }
 
-.folder-icon {
+/* the ".." parent tile inside a folder — same size as a fav tile, styled
+   dimmer so it reads as navigation rather than a bookmark */
+.folder-links .folder-up.fav-tile {
+    background: var(--panel);
+    border-color: var(--border);
+    color: var(--dimmer);
+}
+
+.folder-links .folder-up.fav-tile .ph-folder {
+    font-size: 32px;
+    line-height: 1;
+    color: var(--dimmer);
+    flex-shrink: 0;
+    transition: color 0.1s;
+}
+
+.folder-links .folder-up.fav-tile:hover {
+    color: var(--accent2);
+    background: var(--hover-subtle);
+    border-color: var(--accent2);
+}
+
+.folder-links .folder-up.fav-tile:hover .ph-folder {
+    color: var(--accent2);
+}
+
+.folder-links .folder-up.fav-tile:focus-visible {
+    outline: 1px solid var(--accent2);
+    outline-offset: -1px;
+}
+
+.folder-empty {
+    padding: 14px 8px;
+    text-align: center;
+    color: var(--dimmer);
     font-size: 11px;
-    opacity: 0.6;
+    letter-spacing: 1px;
+    text-transform: uppercase;
 }
 
-.folder-links {
-    padding: 8px;
-    border-top: 1px solid var(--border);
+/* an empty folder (or no folders at root) — the hint fills the body.
+   At root it centers in the whole box; inside a folder it sits under the
+   ".." tile, so it stays compact to fit the fixed-height box without
+   forcing a scrollbar. */
+.folder-tiles > .folder-empty,
+.folder-links.grid > .folder-empty {
+    grid-column: 1 / -1;
+    align-self: stretch;
     display: flex;
-    flex-direction: column;
-    gap: 1px;
+    align-items: center;
+    justify-content: center;
+}
+.folder-tiles > .folder-empty {
+    min-height: 120px;
+}
+.folder-links.grid > .folder-empty {
+    min-height: 40px;
 }
 
+/* (the old .folder-links base padding/border were removed — they were
+   legacy from the row-era design and cost ~17px of chrome in folder
+   views; the body's own padding is all the grid needs) */
 .folder-links.grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
-    gap: 4px;
+    gap: var(--bm-gap);
 }
 
 .folder-links a {
@@ -673,12 +819,12 @@ details[open] > summary.folder-head::before {
     color: var(--white);
 }
 
-a.fav-tile {
+.folder-links .fav-tile {
     position: relative;
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 6px;
+    gap: var(--bm-gap-in);
     padding: 10px 6px 8px;
     color: var(--dim);
     font-size: 12px;
@@ -693,16 +839,19 @@ a.fav-tile {
     text-decoration: none;
 }
 
-a.fav-tile:hover {
+.folder-links .fav-tile:hover {
     color: var(--accent);
     background: var(--hover-subtle);
     border-left: 1px solid var(--accent);
 }
 
-a.fav-tile img.fav {
+.folder-links .fav-tile img.fav {
     width: 32px;
     height: 32px;
     flex-shrink: 0;
+    /* panel background shows only while the icon is loading — a styled
+       box instead of a raw hole; the loaded image covers it entirely */
+    background: var(--panel);
 }
 
 .fav-letter {
@@ -722,9 +871,13 @@ a.fav-tile img.fav {
     user-select: none;
 }
 
-a.fav-tile span {
-    white-space: normal;
-    word-break: break-word;
+.folder-links .fav-tile span {
+    /* single line, like the root folder tiles — a wrapped label would
+       make its row taller than the others, breaking the shared row pitch */
+    min-width: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
     max-width: 100%;
     line-height: 1.3;
 }
@@ -757,33 +910,6 @@ body.edit-mode .tile-edit {
     display: flex;
 }
 
-.folder-head-btns {
-    visibility: hidden;
-    display: flex;
-    margin-left: auto;
-    align-items: center;
-    gap: 0;
-    flex-shrink: 0;
-}
-body.edit-mode .folder-head-btns {
-    visibility: visible;
-}
-
-.folder-head-btn {
-    background: none;
-    border: none;
-    color: var(--dimmer);
-    font-size: 15px;
-    cursor: pointer;
-    padding: 0 7px;
-    line-height: 1;
-    display: flex;
-    align-items: center;
-    transition: color 0.1s;
-}
-.folder-head-btn:hover {
-    color: var(--red);
-}
 
 /* Quick links */
 .quick-links {
@@ -1360,20 +1486,20 @@ body.edit-mode .quick-links a.drag-over {
     border-left-color: var(--accent) !important;
     background: var(--hover-bg);
 }
-body.edit-mode details.folder {
+body.edit-mode .folder-tile[data-drag-index] {
     cursor: grab;
 }
-body.edit-mode details.folder:active {
+body.edit-mode .folder-tile[data-drag-index]:active {
     cursor: grabbing;
 }
-body.edit-mode details.folder.drag-over {
-    border-left: 2px solid var(--accent);
+body.edit-mode .folder-tile[data-drag-index].drag-over {
+    border-color: var(--accent);
     background: var(--hover-subtle);
 }
-body.edit-mode .fav-tile {
+body.edit-mode .fav-tile:not(.folder-up) {
     cursor: grab;
 }
-body.edit-mode .fav-tile:active {
+body.edit-mode .fav-tile:not(.folder-up):active {
     cursor: grabbing;
 }
 body.edit-mode .fav-tile.drag-over {
@@ -1694,10 +1820,99 @@ body.edit-mode .fav-tile.drag-over {
 }
 
 /* System stats */
-#stats-canvas {
+.stats-graph {
+    position: relative;
+    width: 100%;
+    height: 150px;
+}
+
+.stats-canvas {
     display: block;
     width: 100%;
     height: 150px;
+}
+
+.stats-grid {
+    stroke: var(--border);
+    stroke-width: 0.5;
+}
+
+.stats-mid {
+    stroke: var(--border);
+    stroke-width: 1;
+}
+
+.stats-lbl,
+.stats-val {
+    position: absolute;
+    font-family: var(--font-pixel, monospace);
+    font-size: 9px;
+    pointer-events: none;
+}
+
+.stats-lbl {
+    color: var(--dim);
+    left: 4px;
+}
+
+.stats-val {
+    color: var(--white);
+    right: 8px;
+}
+
+.stats-lbl.cpu,
+.stats-val.cpu {
+    top: 3px;
+}
+
+.stats-lbl.mem,
+.stats-val.mem {
+    top: 82px;
+}
+
+/* Stats scroll glide — each 2s htmx poll re-renders the 30-point line
+   with a new point appended. Without this the SVG teleports to its new
+   position every poll (the "tick"); the animation instead glides the
+   whole line left by one slot per poll, so the graph reads as one
+   continuous scroll.
+
+   Why it's seamless: the ring holds 31 points (statsMax in handlers.go)
+   — 30 visible + 1 extra rendered one slot OFF-SCREEN right (at
+   x = 30*step = graphW+step). Each fresh frame starts at translateX(0)
+   with its visible points sitting exactly where the previous frame's
+   RESTING points were (translateX(-step)); the swap changes nothing on
+   screen, and the glide then slides the newest point in from the right
+   while the oldest exits left. No point is ever dropped at a swap, so
+   there is no snap. (The old version dropped the oldest point at each
+   swap and started the new line one slot right — that's the snap-right /
+   glide-left oscillation.)
+
+   One slot = graphW/(histN-1) = 300/29 ≈ 10.345 viewBox px (see
+   widgets/system_stats.go); px in an SVG CSS transform are user units,
+   so the shift scales with the preserveAspectRatio="none" stretch like
+   the points. The 2s duration must match the hx-trigger="every 2s" poll
+   period, and fill-mode forwards is REQUIRED — the resting state is the
+   shifted (-10.345px) position, and without forwards the group would
+   snap back to 0 after each glide. Reduced motion shows the resting
+   position statically (no glide). */
+@keyframes stats-scroll-kf {
+    from {
+        transform: translateX(0);
+    }
+    to {
+        transform: translateX(-10.345px);
+    }
+}
+
+.stats-scroll {
+    animation: stats-scroll-kf 2s linear forwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .stats-scroll {
+        animation: none;
+        transform: translateX(-10.345px);
+    }
 }
 
 /* Calendar */
@@ -1898,4 +2113,11 @@ td.today:hover::after {
     display: flex;
     flex-direction: column;
     gap: 14px;
+}
+
+/* Bottom-align the last card in each split sub-column: split rows end
+   mid-page, so a shorter widget would otherwise leave a gap between rows.
+   The stretch is bounded by the tallest card in the row. */
+.split-col > .widget:last-child {
+    flex-grow: 1;
 }

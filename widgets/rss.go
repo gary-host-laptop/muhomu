@@ -1,28 +1,62 @@
 package widgets
 
 import (
-	"crypto/md5"
 	"fmt"
 	"html/template"
 	"io"
+	"log"
 	"net/http"
-	"net/url"
-	"os"
-	"path/filepath"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/mmcdole/gofeed"
 )
+
+// ── Feed cache ────────────────────────────────────────────────
+// Each feed is cached with a TTL (default 2h). Within the window
+// no network call is made. After expiry, a conditional GET via
+// ETag/Last-Modified tries for a 304 before re-downloading.
+type cachedFeed struct {
+	etag         string
+	lastModified string
+	items        []feedArticle
+	expiresAt    time.Time
+}
+
+var (
+	feedCache   = map[string]*cachedFeed{}
+	feedCacheMu sync.Mutex
+)
+
+// defaultCacheTTL is used when no custom "cache" option is set.
+const defaultCacheTTL = 2 * time.Hour
 
 type RSSWidget struct{}
 
 func (w *RSSWidget) ID() string { return "rss" }
 
 type feedConfig struct {
-	URL   string
-	Title string
-	Limit int // per-feed limit; 0 = no limit
+	URL           string
+	Title         string
+	Limit         int // per-feed limit; 0 = no limit
+	CacheDuration time.Duration
+}
+
+type feedArticle struct {
+	Title       string
+	URL         string
+	Published   string
+	Description string
+	FeedTitle   string
+	ImageURL    string
+	FaviconURL  string
+}
+
+// feedResult carries the outcome of fetching one feed.
+type feedResult struct {
+	articles []feedArticle
+	err      error
 }
 
 func (w *RSSWidget) Render(ctx RenderContext) (template.HTML, error) {
@@ -51,7 +85,6 @@ func (w *RSSWidget) Render(ctx RenderContext) (template.HTML, error) {
 			itemsPerPage = n
 		}
 	} else if v, ok := ctx.Options["collapse-after"]; ok {
-		// fallback to old option name
 		switch n := v.(type) {
 		case float64:
 			itemsPerPage = int(n)
@@ -61,6 +94,16 @@ func (w *RSSWidget) Render(ctx RenderContext) (template.HTML, error) {
 	}
 	if itemsPerPage < 1 {
 		itemsPerPage = 5
+	}
+
+	// ── Parse cache duration ──
+	cacheTTL := defaultCacheTTL
+	if v, ok := ctx.Options["cache"]; ok {
+		if s, ok := v.(string); ok {
+			if d, err := time.ParseDuration(s); err == nil && d > 0 {
+				cacheTTL = d
+			}
+		}
 	}
 
 	// ── Parse feeds ──
@@ -79,7 +122,7 @@ func (w *RSSWidget) Render(ctx RenderContext) (template.HTML, error) {
 		if url == "" {
 			continue
 		}
-		fc := feedConfig{URL: url}
+		fc := feedConfig{URL: url, CacheDuration: cacheTTL}
 		if t, ok := m["title"].(string); ok {
 			fc.Title = t
 		}
@@ -91,6 +134,14 @@ func (w *RSSWidget) Render(ctx RenderContext) (template.HTML, error) {
 				fc.Limit = n
 			}
 		}
+		// Per-feed cache override
+		if v, ok := m["cache"]; ok {
+			if s, ok := v.(string); ok {
+				if d, err := time.ParseDuration(s); err == nil && d > 0 {
+					fc.CacheDuration = d
+				}
+			}
+		}
 		feeds = append(feeds, fc)
 	}
 
@@ -98,88 +149,37 @@ func (w *RSSWidget) Render(ctx RenderContext) (template.HTML, error) {
 		return "", nil
 	}
 
-	// ── Fetch and parse feeds ──
-	fp := gofeed.NewParser()
-	client := &http.Client{Timeout: 8 * time.Second}
-	fp.Client = client
+	// ── Fetch feeds in parallel ──
+	results := make([]feedResult, len(feeds))
+	var wg sync.WaitGroup
 
-	type article struct {
-		Title       string
-		URL         string
-		Published   string
-		Description string
-		FeedTitle   string
-		ImageURL    string
-		FaviconURL  string
+	for i := range feeds {
+		wg.Add(1)
+		go func(idx int, fc feedConfig) {
+			defer wg.Done()
+			articles, err := fetchFeed(fc, ctx.FaviconDir)
+			results[idx] = feedResult{articles: articles, err: err}
+		}(i, feeds[i])
 	}
 
-	var allArticles []article
+	wg.Wait()
+
+	// ── Collect articles, skip failed feeds ──
+	var allArticles []feedArticle
 	seen := make(map[string]bool)
 
-	for _, fc := range feeds {
-		parsed, err := fp.ParseURL(fc.URL)
-		if err != nil {
+	for _, res := range results {
+		if res.err != nil {
+			log.Printf("rss: feed fetch error: %v", res.err)
 			continue
 		}
-		sourceTitle := fc.Title
-		if sourceTitle == "" {
-			sourceTitle = parsed.Title
-		}
-
-		max := fc.Limit
-		if max <= 0 || max > len(parsed.Items) {
-			max = len(parsed.Items)
-		}
-
-		for i := 0; i < max; i++ {
-			item := parsed.Items[i]
-			if item.Title == "" {
+		for _, a := range res.articles {
+			if seen[a.Title] {
 				continue
 			}
-			// deduplicate by title
-			if seen[item.Title] {
-				continue
-			}
-			seen[item.Title] = true
-
-			link := item.Link
-			if link == "" && len(item.Links) > 0 {
-				link = item.Links[0]
-			}
-
-			published := ""
-			if item.PublishedParsed != nil {
-				published = item.PublishedParsed.Format("2006-01-02")
-			}
-
-			desc := ""
-			if item.Description != "" {
-				// strip tags for plain text
-				desc = stripTags(item.Description)
-				if len(desc) > 200 {
-					desc = desc[:200] + "…"
-				}
-			}
-
-			imgURL := ""
-			if item.Image != nil && item.Image.URL != "" {
-				imgURL = item.Image.URL
-			}
-
-			faviconURL := cacheFeedFavicon(link, ctx.FaviconDir)
-
-			allArticles = append(allArticles, article{
-				Title:       item.Title,
-				URL:         link,
-				Published:   published,
-				Description: desc,
-				FeedTitle:   sourceTitle,
-				ImageURL:    imgURL,
-				FaviconURL:  faviconURL,
-			})
+			seen[a.Title] = true
+			allArticles = append(allArticles, a)
 		}
-
-		// Apply global limit
 		if limit > 0 && len(allArticles) >= limit {
 			allArticles = allArticles[:limit]
 			break
@@ -190,7 +190,6 @@ func (w *RSSWidget) Render(ctx RenderContext) (template.HTML, error) {
 		return "", nil
 	}
 
-	// Apply global limit
 	if limit > 0 && len(allArticles) > limit {
 		allArticles = allArticles[:limit]
 	}
@@ -253,7 +252,7 @@ func (w *RSSWidget) Render(ctx RenderContext) (template.HTML, error) {
 		sb.WriteString(`</div>`)
 	}
 
-	// ── Pagination nav with data-pager attributes ──
+	// ── Pagination nav ──
 	if totalPages > 1 {
 		sb.WriteString(`<div class="rss-pagination">`)
 		sb.WriteString(`<button class="rss-nav-btn" data-pager="prev" disabled>‹ prev</button>`)
@@ -270,48 +269,140 @@ func (w *RSSWidget) Render(ctx RenderContext) (template.HTML, error) {
 		inner), nil
 }
 
-// cacheFeedFavicon fetches a feed's favicon from DuckDuckGo, caches it
-// to disk, and returns a local serving path. Returns "" on failure.
-func cacheFeedFavicon(feedURL, faviconDir string) string {
-	parsed, err := url.Parse(feedURL)
-	if err != nil || parsed.Host == "" {
-		return ""
+// ── feed fetching with TTL + ETag/Last-Modified caching ───────
+
+// fetchFeed returns articles for a feed. If a valid cached entry
+// exists within the TTL window, no network call is made.
+// After TTL expiry, a conditional GET uses ETag/Last-Modified
+// to avoid re-downloading if the feed hasn't changed.
+func fetchFeed(fc feedConfig, faviconDir string) ([]feedArticle, error) {
+	now := time.Now()
+
+	// ── Check cache: return immediately if within TTL ──
+	feedCacheMu.Lock()
+	cached := feedCache[fc.URL]
+	if cached != nil && now.Before(cached.expiresAt) {
+		feedCacheMu.Unlock()
+		return cached.items, nil
 	}
-	srcURL := "https://icons.duckduckgo.com/ip3/" + parsed.Hostname() + ".ico"
+	feedCacheMu.Unlock()
 
-	// Cache key: MD5 of the source URL (same scheme as favicon.go)
-	key := fmt.Sprintf("%x.ico", md5.Sum([]byte(srcURL)))
-	destPath := filepath.Join(faviconDir, key)
-
-	// Already cached
-	if _, err := os.Stat(destPath); err == nil {
-		return "/api/images/favicons/" + key
+	// ── Build request with conditional headers if expired data exists ──
+	req, err := http.NewRequest("GET", fc.URL, nil)
+	if err != nil {
+		return nil, err
 	}
+	req.Header.Add("User-Agent", "muhomu/1.0")
 
-	// Fetch and cache
-	client := &http.Client{Timeout: 5 * time.Second}
-	resp, err := client.Get(srcURL)
-	if err != nil || resp.StatusCode != 200 {
-		if resp != nil {
-			resp.Body.Close()
+	if cached != nil {
+		if cached.etag != "" {
+			req.Header.Add("If-None-Match", cached.etag)
 		}
-		return ""
+		if cached.lastModified != "" {
+			req.Header.Add("If-Modified-Since", cached.lastModified)
+		}
+	}
+
+	client := &http.Client{Timeout: 8 * time.Second}
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, err
 	}
 	defer resp.Body.Close()
 
-	f, err := os.Create(destPath)
+	// 304 — feed hasn't changed, re-use cached items with fresh TTL
+	if resp.StatusCode == http.StatusNotModified && cached != nil {
+		feedCacheMu.Lock()
+		feedCache[fc.URL] = &cachedFeed{
+			etag:         cached.etag,
+			lastModified: cached.lastModified,
+			items:        cached.items,
+			expiresAt:    now.Add(fc.CacheDuration),
+		}
+		feedCacheMu.Unlock()
+		return cached.items, nil
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("unexpected status %d from %s", resp.StatusCode, fc.URL)
+	}
+
+	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return ""
-	}
-	defer f.Close()
-	if _, err := io.Copy(f, resp.Body); err != nil {
-		os.Remove(destPath)
-		return ""
+		return nil, err
 	}
 
-	return "/api/images/favicons/" + key
+	fp := gofeed.NewParser()
+	parsed, err := fp.ParseString(string(body))
+	if err != nil {
+		return nil, err
+	}
+
+	sourceTitle := fc.Title
+	if sourceTitle == "" {
+		sourceTitle = parsed.Title
+	}
+
+	max := fc.Limit
+	if max <= 0 || max > len(parsed.Items) {
+		max = len(parsed.Items)
+	}
+
+	articles := make([]feedArticle, 0, max)
+	for i := 0; i < max; i++ {
+		item := parsed.Items[i]
+		if item.Title == "" {
+			continue
+		}
+
+		link := item.Link
+		if link == "" && len(item.Links) > 0 {
+			link = item.Links[0]
+		}
+
+		published := ""
+		if item.PublishedParsed != nil {
+			published = item.PublishedParsed.Format("2006-01-02")
+		}
+
+		desc := ""
+		if item.Description != "" {
+			desc = stripTags(item.Description)
+			if len(desc) > 200 {
+				desc = desc[:200] + "…"
+			}
+		}
+
+		imgURL := ""
+		if item.Image != nil && item.Image.URL != "" {
+			imgURL = item.Image.URL
+		}
+
+		faviconURL := CacheFavicon(GuessFaviconURL(link), faviconDir)
+
+		articles = append(articles, feedArticle{
+			Title:       item.Title,
+			URL:         link,
+			Published:   published,
+			Description: desc,
+			FeedTitle:   sourceTitle,
+			ImageURL:    imgURL,
+			FaviconURL:  faviconURL,
+		})
+	}
+
+	// ── Cache the result ──
+	etag := resp.Header.Get("ETag")
+	lastModified := resp.Header.Get("Last-Modified")
+
+	feedCacheMu.Lock()
+	feedCache[fc.URL] = &cachedFeed{
+		etag:         etag,
+		lastModified: lastModified,
+		items:        articles,
+		expiresAt:    now.Add(fc.CacheDuration),
+	}
+	feedCacheMu.Unlock()
+
+	return articles, nil
 }
-
-
-
-

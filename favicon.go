@@ -1,126 +1,65 @@
 package main
 
 import (
-	"crypto/md5"
-	"fmt"
-	"io"
 	"log"
-	"net/http"
-	"net/url"
 	"os"
 	"path/filepath"
-	"strings"
-	"time"
+
+	"muhomu/widgets"
 )
 
 // faviconDir is set from appCfg at startup.
 // Favicons are stored as <md5-of-source-url>.ext
 // and served at /api/images/favicons/<filename>.
 
-// guessFaviconURL derives the duckduckgo favicon url from a page url,
-// mirroring the js guessFavicon function.
-func guessFaviconURL(pageURL string) string {
-	u, err := url.Parse(pageURL)
-	if err != nil || u.Host == "" {
-		return ""
-	}
-	return "https://icons.duckduckgo.com/ip3/" + u.Hostname() + ".ico"
-}
-
-// faviconKey returns a stable filename for a given source url.
-func faviconKey(srcURL string) string {
-	sum := md5.Sum([]byte(srcURL))
-	ext := filepath.Ext(srcURL)
-	if ext == "" || len(ext) > 5 {
-		ext = ".ico"
-	}
-	// strip query strings from ext
-	if idx := strings.Index(ext, "?"); idx != -1 {
-		ext = ext[:idx]
-	}
-	return fmt.Sprintf("%x%s", sum, ext)
-}
-
-// isLocalFavicon returns true if the url is already a local path.
-func isLocalFavicon(u string) bool {
-	return strings.HasPrefix(u, "/api/images/favicons/")
-}
-
-// cacheFavicon fetches srcURL, saves it to the favicons directory,
-// and returns the local serving path. Returns "" on failure.
-func cacheFavicon(srcURL, faviconDir string) string {
-	if srcURL == "" {
-		return ""
-	}
-	if isLocalFavicon(srcURL) {
-		// already cached — verify file still exists
-		filename := filepath.Base(srcURL)
-		if _, err := os.Stat(filepath.Join(faviconDir, filename)); err == nil {
-			return srcURL
-		}
-		// file missing, re-fetch
-	}
-
-	key := faviconKey(srcURL)
-	destPath := filepath.Join(faviconDir, key)
-
-	// already on disk
-	if _, err := os.Stat(destPath); err == nil {
-		return "/api/images/favicons/" + key
-	}
-
-	client := &http.Client{Timeout: 5 * time.Second}
-	resp, err := client.Get(srcURL)
-	if err != nil {
-		return ""
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode != 200 {
-		return ""
-	}
-
-	f, err := os.Create(destPath)
-	if err != nil {
-		return ""
-	}
-	defer f.Close()
-	if _, err := io.Copy(f, resp.Body); err != nil {
-		os.Remove(destPath)
-		return ""
-	}
-
-	return "/api/images/favicons/" + key
-}
-
 // cacheFaviconForLink resolves the favicon url for a bookmark link:
-//  1. if link.Fav is already local → keep it
-//  2. if link.Fav is an explicit external url → fetch & cache that
-//  3. if link.Fav is empty → derive from link.URL via duckduckgo → fetch & cache
+//  1. if link.Fav is already local and valid → keep it
+//  2. if link.Fav is local but missing/corrupt → re-fetch from the
+//     page's derived url and delete the stale file on success
+//  3. if link.Fav is an explicit external url → fetch & cache that
+//  4. if link.Fav is empty → derive from link.URL via duckduckgo → fetch & cache
 //
 // Returns the local path, or the original Fav if caching fails.
 func cacheFaviconForLink(label, pageURL, favURL, faviconDir string) string {
-	if isLocalFavicon(favURL) {
-		// verify still on disk
-		filename := filepath.Base(favURL)
-		if _, err := os.Stat(filepath.Join(faviconDir, filename)); err == nil {
+	stalePath := ""
+	if widgets.IsLocalFavicon(favURL) {
+		// verify still on disk AND that it's actually an image — corrupt
+		// files (e.g. an HTML page saved as .png) are re-fetched below.
+		// Valid images with a wrong extension (e.g. WebP bytes saved as
+		// .ico) pass ValidFaviconFile and are deliberately left alone:
+		// browsers content-sniff <img> payloads so they render fine, and
+		// re-saving them would churn files+DB for zero visible gain.
+		p := filepath.Join(faviconDir, filepath.Base(favURL))
+		if _, err := os.Stat(p); err == nil && widgets.ValidFaviconFile(p) {
 			return favURL
 		}
+		stalePath = p
 	}
 
 	src := favURL
-	if src == "" || isLocalFavicon(src) {
-		src = guessFaviconURL(pageURL)
+	if src == "" || widgets.IsLocalFavicon(src) {
+		src = widgets.GuessFaviconURL(pageURL)
 	}
 	if src == "" {
 		return favURL
 	}
 
-	local := cacheFavicon(src, faviconDir)
-	if local != "" {
-		return local
+	local := widgets.CacheFavicon(src, faviconDir)
+	if local == "" {
+		// fetch failed — return original so browser can still try
+		return favURL
 	}
-	// fetch failed — return original so browser can still try
-	return favURL
+	// Remove the stale corrupt file only if it is a different file than the
+	// one CacheFavicon just wrote. When the re-fetch source resolves to the
+	// same md5 base (e.g. a corrupt icon originally cached from the same
+	// duckduckgo url), CacheFavicon overwrites that exact path in place —
+	// deleting it here would destroy the fresh icon.
+	if stalePath != "" && filepath.Base(stalePath) != filepath.Base(local) {
+		if err := os.Remove(stalePath); err == nil {
+			log.Printf("favicon: removed stale corrupt file %s", filepath.Base(stalePath))
+		}
+	}
+	return local
 }
 
 // migrateFavicons runs in the background on startup, scanning all bookmarks
@@ -139,9 +78,9 @@ func migrateFavicons(faviconDir string) {
 	changed := false
 	for fi, folder := range folders {
 		for li, link := range folder.Links {
-			if isLocalFavicon(link.Fav) {
-				continue
-			}
+			// cacheFaviconForLink keeps valid local favicons as-is and
+			// re-fetches missing or corrupt ones — so this pass also
+			// self-heals broken cached files without user action.
 			local := cacheFaviconForLink(link.Label, link.URL, link.Fav, faviconDir)
 			if local != link.Fav {
 				folders[fi].Links[li].Fav = local
@@ -169,9 +108,6 @@ func migrateFavicons(faviconDir string) {
 	}
 	qaChanged := false
 	for i, item := range items {
-		if isLocalFavicon(item.Favicon) {
-			continue
-		}
 		local := cacheFaviconForLink(item.Label, item.URL, item.Favicon, faviconDir)
 		if local != item.Favicon {
 			items[i].Favicon = local

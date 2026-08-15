@@ -1,6 +1,7 @@
 package widgets
 
 import (
+	"encoding/json"
 	"fmt"
 	"html/template"
 	"strings"
@@ -27,9 +28,10 @@ func (w *QuickAccessWidget) Render(ctx RenderContext) (template.HTML, error) {
 </a>`, item.URL, i, fav, htmlEscape(item.Label))
 	}
 	sb.WriteString(`</div></div>`)
+	state, _ := json.Marshal(items)
 	return wrap(ctx, "quick-access", "クイックアクセス",
 		`<button class="wt-btn" id="qa-add-btn"><i class="ph-light ph-plus"></i></button>`,
-		sb.String()), nil
+		sb.String(), string(state)), nil
 }
 
 

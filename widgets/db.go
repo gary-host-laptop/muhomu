@@ -8,26 +8,29 @@ import (
 // to user-produced data. They mirror the main package's db functions
 // but are owned by the widgets package so widgets are self-contained.
 
+// The json tags mirror the main package's types so that data-state
+// (marshalled here for the widget root) round-trips through the client
+// and back into main's persistence functions unchanged.
 type BookmarkLink struct {
-	Label string
-	URL   string
-	Fav   string
+	Label string `json:"label"`
+	URL   string `json:"url"`
+	Fav   string `json:"fav"`
 }
 
 type BookmarkFolder struct {
-	Folder string
-	Links  []BookmarkLink
+	Folder string         `json:"folder"`
+	Links  []BookmarkLink `json:"links"`
 }
 
 type QuickItem struct {
-	Label   string
-	URL     string
-	Favicon string
+	Label   string `json:"label"`
+	URL     string `json:"url"`
+	Favicon string `json:"favicon"`
 }
 
 type RecentItem struct {
-	Name string
-	URL  string
+	Name string `json:"name"`
+	URL  string `json:"url"`
 }
 
 type Quote struct {

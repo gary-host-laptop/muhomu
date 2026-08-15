@@ -30,6 +30,9 @@ var (
 		data map[string]*cacheEntry
 	}{data: make(map[string]*cacheEntry)}
 	cacheTTL = 5 * time.Second
+
+	// indexTmpl is the parsed new-tab page template, created once at startup.
+	indexTmpl *template.Template
 )
 
 func invalidateCache() {
@@ -80,6 +83,8 @@ var appCfg struct {
 }
 
 func main() {
+	var err error
+
 	port := flag.String("port", "8080", "port to listen on")
 	dataDir := flag.String("data", "./data", "path to data directory")
 	staticDir := flag.String("static", "./static", "path to static files")
@@ -121,11 +126,19 @@ func main() {
 	go migrateFavicons(appCfg.faviconDir)
 	startStatsCollector()
 
+	// ── Parse template once at startup ──
+	indexTmpl, err = template.New("index.tmpl").Funcs(template.FuncMap{
+		"widgetHTML": func(ws map[string]template.HTML, key string) template.HTML {
+			return ws[key]
+		},
+	}).ParseFiles("templates/index.tmpl")
+	if err != nil {
+		log.Fatal("failed to parse index template:", err)
+	}
+
 	mux := http.NewServeMux()
 
-	mux.HandleFunc("GET /api/data", handleGetData)
-	mux.HandleFunc("POST /api/data", handlePostData)
-	mux.HandleFunc("GET /api/stats", handleStats)
+	mux.HandleFunc("GET /api/footer-stats", handleFooterStats)
 	mux.HandleFunc("GET /api/bookmarks/search", handleSearchBookmarks)
 	mux.HandleFunc("GET /api/weather", handleWeather)
 	mux.HandleFunc("GET /api/quotes", handleGetQuotes)
@@ -133,6 +146,11 @@ func main() {
 	mux.HandleFunc("DELETE /api/quotes/{id}", handleDeleteQuote)
 	mux.HandleFunc("GET /api/quote/random", handleQuoteRandom)
 	mux.HandleFunc("GET /api/kotoba/next", handleKotobaNext)
+
+	// htmx widget fragment endpoints — render a single widget from
+	// server state (GET) or persist its state and re-render it (POST).
+	mux.HandleFunc("GET /api/widget/{id}", handleWidgetGet)
+	mux.HandleFunc("POST /api/widget/{id}", handleWidgetPost)
 
 	mux.HandleFunc("GET /api/widget-images/next", handleWidgetImageNext)
 	mux.Handle("GET /api/widget-images/files/",
@@ -164,19 +182,16 @@ func main() {
 }
 
 // widgetIDsWithScript is the set of widget IDs that have a JS file
-// in static/js/. Widgets without JS (calendar, weather)
-// are excluded to avoid 404s.
+// in static/js/. Widgets without JS (calendar, weather, and the ones
+// rendered purely via htmx: image, kotoba, quote, system-stats) are
+// excluded to avoid 404s.
 var widgetIDsWithScript = map[string]bool{
-	"bookmarks":         true,
-	"image":             true,
-	"kotoba":            true,
-	"notes":             true,
-	"quick-access":      true,
-	"quote":             true,
-	"rain":              true,
-	"recently-visited":  true,
-	"system-stats":      true,
-	"timer":             true,
+	"bookmarks":        true,
+	"notes":            true,
+	"quick-access":     true,
+	"rain":             true,
+	"recently-visited": true,
+	"timer":            true,
 }
 
 // collectActiveWidgetIDs recursively walks the widget tree and returns
@@ -244,26 +259,7 @@ func serveIndex(w http.ResponseWriter, r *http.Request) {
 	rng := rand.New(rand.NewSource(time.Now().UnixNano()))
 
 	registry := widgets.Registry()
-	// Convert quotes to widget-level ConfigQuote slice
-	configQuotes := make([]widgets.ConfigQuote, len(quotes))
-	for i, q := range quotes {
-		configQuotes[i] = widgets.ConfigQuote{Text: q.Text, Author: q.Author}
-	}
-	ctx := widgets.RenderContext{
-		DB:             db,
-		RNG:            rng,
-		FaviconDir:     appCfg.faviconDir,
-		ProfileDir:     appCfg.profileDir,
-		BGDir:          appCfg.bgDir,
-		WidgetImageDir: appCfg.widgetImagesDir,
-		JLPTLevel:      cfg.JLPTLevel,
-		TitleLang:      cfg.TitleLang,
-		LocationCity:   cfg.Location.City,
-		LocationLat:    cfg.Location.Lat,
-		LocationLon:    cfg.Location.Lon,
-		DefaultLED:     cfg.DefaultLED,
-		ConfigQuotes:   configQuotes,
-	}
+	ctx := widgetRenderContext(rng, nil)
 
 	// ── Render widgets and collect HTML ──
 	widgetMap := make(map[string]template.HTML)
@@ -367,30 +363,9 @@ func serveIndex(w http.ResponseWriter, r *http.Request) {
 		bgHTML = template.HTML(`<div id="bg"` + cls + `><img src="` + bgImageURL + `" alt=""></div>`)
 	}
 
-	// ── Footer items ──
-	var footerHTML strings.Builder
-	footerItems := cfg.FooterItems
-	for i, item := range footerItems {
-		if i > 0 {
-			footerHTML.WriteString(`<span class="fi-sep">·</span>`)
-		}
-		switch item {
-		case "rx":
-			footerHTML.WriteString(`<span class="fi-item fi-rx" id="fi-rx">⬇ 0.0 KB/s</span>`)
-		case "tx":
-			footerHTML.WriteString(`<span class="fi-item fi-tx" id="fi-tx">⬆ 0.0 KB/s</span>`)
-		case "cpu":
-			footerHTML.WriteString(`<span class="fi-item fi-cpu" id="fi-cpu">◉ cpu 0%</span>`)
-		case "ram":
-			footerHTML.WriteString(`<span class="fi-item fi-ram" id="fi-ram">◉ ram 0%</span>`)
-		case "version":
-			// spacer before version pushes it to the right
-			if i > 0 {
-				footerHTML.WriteString(`<span class="fi-spacer"></span>`)
-			}
-			footerHTML.WriteString(`<span class="fi-version">v1.1.1</span>`)
-		}
-	}
+	// ── Footer items (live values; the footer polls /api/footer-stats
+	// via htmx every 2s to keep them fresh) ──
+	footerHTML := buildFooterHTML(cfg.FooterItems, currentSystemStats())
 
 	// ── Profile image ──
 	profImageURL := pickImage(appCfg.profileDir, "/api/images/profile/", rng)
@@ -476,29 +451,10 @@ func serveIndex(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// ── Initial stats for footer ──
-	statsMu.RLock()
-	initCPU := statsCurrent.cpu
-	initRAM := statsCurrent.ram
-	initRX := statsCurrent.rx
-	initTX := statsCurrent.tx
-	statsMu.RUnlock()
-
-	// ── JS seed ──
-	rawBookmarks, _ := getBookmarks()
-	rawQuick, _ := getQuickAccess()
-	rawRecent, _ := getRecent()
+	// ── JS seed (data the server-rendered widgets no longer need — e.g.
+	// bookmarks/quick/recent — now lives in each widget's data-state) ──
 	initialData := map[string]interface{}{
-		"nt_bookmarks":     rawBookmarks,
-		"nt_quick":         rawQuick,
-		"nt_recent":        rawRecent,
-		"nt_location":      map[string]string{"city": cfg.Location.City, "lat": cfg.Location.Lat, "lon": cfg.Location.Lon},
-		"nt_search_target": cfg.SearchTarget,
-		"nt_cpu":           initCPU,
-		"nt_ram":           initRAM,
-		"nt_rx":            initRX,
-		"nt_tx":            initTX,
-		"nt_taglines":      cfg.Taglines,
+		"nt_taglines": cfg.Taglines,
 	}
 	jsonInitial, _ := json.Marshal(initialData)
 
@@ -540,21 +496,11 @@ func serveIndex(w http.ResponseWriter, r *http.Request) {
 		InitialData:       template.JS(jsonInitial),
 		ActiveWidgetIDs:   activeWidgetIDs,
 		ThemeCSSLinks:     template.HTML(themeCSSLinks.String()),
-		FooterHTML:        template.HTML(footerHTML.String()),
-	}
-
-	tmpl, err := template.New("index.tmpl").Funcs(template.FuncMap{
-		"widgetHTML": func(ws map[string]template.HTML, key string) template.HTML {
-			return ws[key]
-		},
-	}).ParseFiles("templates/index.tmpl")
-	if err != nil {
-		http.Error(w, "template error: "+err.Error(), 500)
-		return
+		FooterHTML:        template.HTML(footerHTML),
 	}
 
 	var buf bytes.Buffer
-	if err := tmpl.Execute(&buf, pageData); err != nil {
+	if err := indexTmpl.Execute(&buf, pageData); err != nil {
 		http.Error(w, "render error: "+err.Error(), 500)
 		return
 	}
