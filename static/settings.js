@@ -99,10 +99,16 @@
   }
 
   /* ── generic field renderer ──────────────────────────────── */
-  // f: {path, label, type, options?, placeholder?, min?, max?, onChange?}
+  // f: {path, label, type, options?, placeholder?, min?, max?, onChange?, wide?}
   // target: the object the path is read/written on (defaults to cfg).
+  function fieldGrid(cols) {
+    const grid = el("div", "form-grid");
+    if (cols) grid.style.setProperty("--field-cols", cols);
+    return grid;
+  }
+
   function renderField(container, f, target) {
-    const row = el("div", "form-row");
+    const row = el("div", "form-row" + (f.wide ? " wide" : ""));
     row.appendChild(el("label", null, f.label));
     const t = target || cfg;
     const val = () => getPath(t, f.path);
@@ -193,6 +199,7 @@
       }
     }
     container.appendChild(row);
+    return row;
   }
 
   /* ── search engines editor ───────────────────────────────── */
@@ -260,6 +267,7 @@
     const cur = (cfg.footer_items = (cfg.footer_items || []).filter(
       (it) => it !== "version" && it !== "github"
     ));
+    const grid = el("div", "check-grid");
     items.forEach((it) => {
       const row = el("label", "check-row");
       const cb = el("input");
@@ -273,8 +281,9 @@
       });
       row.appendChild(cb);
       row.appendChild(document.createTextNode(it));
-      container.appendChild(row);
+      grid.appendChild(row);
     });
+    container.appendChild(grid);
     container.appendChild(el("div", "form-hint", "muhomu version and the GitHub link always show at the far right."));
   }
 
@@ -578,17 +587,23 @@
     panel.innerHTML = "";
     const schema = WIDGET_SCHEMA[w.id] || {};
     const opts = w.options || (w.options = {});
-    renderField(panel, { path: "led", label: "led", type: "color", placeholder: "var(--accent)" }, opts);
+    const grid = fieldGrid(2);
+    renderField(grid, { path: "led", label: "led", type: "color", placeholder: "var(--accent)" }, opts);
+    const wide = [];
     (schema.options || []).forEach((f) => {
       if (f.layout) return;
       if (f.type === "feed-list") {
-        panel.appendChild(el("div", "option-label", f.label));
-        const sub = el("div", "list-editor");
-        panel.appendChild(sub);
-        renderFeedList(sub, opts[f.path] || (opts[f.path] = []));
+        wide.push(f);
       } else {
-        renderField(panel, f, opts);
+        renderField(grid, f, opts);
       }
+    });
+    panel.appendChild(grid);
+    wide.forEach((f) => {
+      panel.appendChild(el("div", "option-label", f.label));
+      const sub = el("div", "list-editor");
+      panel.appendChild(sub);
+      renderFeedList(sub, opts[f.path] || (opts[f.path] = []));
     });
   }
 
@@ -884,18 +899,19 @@
 
   /* ── sections ────────────────────────────────────────────── */
   function buildIdentity(body) {
-    renderField(body, { path: "username", label: "display name", type: "text", placeholder: "your name" });
-    body.appendChild(el("div", "form-hint", "shown in the header of the new tab"));
-    body.appendChild(el("div", "subsection-label", "location · weather"));
-    renderField(body, { path: "location.city", label: "city", type: "text", placeholder: "e.g. Tokyo" });
-    renderField(body, { path: "location.lat", label: "lat", type: "text", placeholder: "latitude" });
-    renderField(body, { path: "location.lon", label: "lon", type: "text", placeholder: "longitude" });
-    body.appendChild(el("div", "form-hint", "city is the weather label; coordinates are the fallback for open-meteo"));
+    const grid = fieldGrid(2);
+    renderField(grid, { path: "username", label: "display name", type: "text", placeholder: "your name" });
+    renderField(grid, { path: "location.city", label: "city", type: "text", placeholder: "e.g. Tokyo" });
+    renderField(grid, { path: "location.lat", label: "lat", type: "text", placeholder: "latitude" });
+    renderField(grid, { path: "location.lon", label: "lon", type: "text", placeholder: "longitude" });
+    body.appendChild(grid);
+    body.appendChild(el("div", "form-hint", "display name is shown in the header; city is the weather label and coordinates are the fallback for open-meteo"));
   }
 
   function buildAppearance(body) {
     body.appendChild(el("div", "option-label", "theme"));
-    renderField(body, { path: "theme", label: "base theme", type: "segmented", options: [["dark", "dark"], ["light", "light"]], onChange: applyTheme });
+    const themeGrid = fieldGrid(2);
+    renderField(themeGrid, { path: "theme", label: "base theme", type: "segmented", options: [["dark", "dark"], ["light", "light"]], onChange: applyTheme });
     const customRow = el("div", "form-row");
     customRow.appendChild(el("label", null, "custom theme"));
     const sel = el("select", "form-select");
@@ -916,23 +932,30 @@
       markDirty();
     });
     customRow.appendChild(sel);
-    body.appendChild(customRow);
+    themeGrid.appendChild(customRow);
+    body.appendChild(themeGrid);
 
     body.appendChild(el("div", "subsection-label", "fonts"));
-    renderField(body, { path: "font_latin", label: "latin font", type: "select", options: [["inter", "inter"]] });
-    renderField(body, { path: "font_jp", label: "japanese fallback", type: "select", options: [["dotgothic16", "dotgothic16"]] });
-    renderField(body, { path: "font_clock", label: "clock font", type: "select", options: [["orbitron", "orbitron"]] });
-    renderField(body, { path: "ui_lang", label: "ui language", type: "select", options: [["en", "English"], ["ja", "日本語"]] });
-    renderField(body, { path: "title_lang", label: "widget title lang", type: "segmented", options: [["ja", "ja"], ["en", "en"]] });
+    const fontGrid = fieldGrid(3);
+    renderField(fontGrid, { path: "font_latin", label: "latin font", type: "select", options: [["inter", "inter"]] });
+    renderField(fontGrid, { path: "font_jp", label: "japanese fallback", type: "select", options: [["dotgothic16", "dotgothic16"]] });
+    renderField(fontGrid, { path: "font_clock", label: "clock font", type: "select", options: [["orbitron", "orbitron"]] });
+    renderField(fontGrid, { path: "ui_lang", label: "ui language", type: "select", options: [["en", "English"], ["ja", "日本語"]] });
+    renderField(fontGrid, { path: "title_lang", label: "widget title lang", type: "segmented", options: [["ja", "ja"], ["en", "en"]] });
+    body.appendChild(fontGrid);
 
     body.appendChild(el("div", "subsection-label", "clock"));
-    renderField(body, { path: "clock_format", label: "format", type: "segmented", options: [["24h", "24h"], ["12h", "12h"]] });
-    renderField(body, { path: "clock_seconds", label: "seconds", type: "toggle" });
-    renderField(body, { path: "clock_theme", label: "color mode", type: "segmented", options: [["theme", "follow theme"], ["light", "force light"], ["dark", "force dark"]] });
+    const clockGrid = fieldGrid(2);
+    renderField(clockGrid, { path: "clock_format", label: "format", type: "segmented", options: [["24h", "24h"], ["12h", "12h"]] });
+    renderField(clockGrid, { path: "clock_seconds", label: "seconds", type: "toggle" });
+    renderField(clockGrid, { path: "clock_theme", label: "color mode", type: "segmented", options: [["theme", "follow theme"], ["light", "force light"], ["dark", "force dark"]], wide: true });
+    body.appendChild(clockGrid);
 
     body.appendChild(el("div", "subsection-label", "background"));
-    renderField(body, { path: "bg_blur", label: "blur", type: "toggle" });
-    renderField(body, { path: "default_led", label: "default led", type: "color", placeholder: "var(--accent)" });
+    const bgGrid = fieldGrid(2);
+    renderField(bgGrid, { path: "bg_blur", label: "blur", type: "toggle" });
+    renderField(bgGrid, { path: "default_led", label: "default led", type: "color", placeholder: "var(--accent)" });
+    body.appendChild(bgGrid);
   }
 
   function buildLayout(body) {
@@ -1020,8 +1043,10 @@
     body.appendChild(el("div", "form-hint", "one entry per configured widget — where it lives plus its options. Order is set in the layout section."));
 
     body.appendChild(el("div", "subsection-label", "search"));
-    renderField(body, { path: "search_target", label: "open results", type: "segmented", options: [["_self", "same tab"], ["_blank", "new tab"]] });
-    renderField(body, { path: "jlpt_level", label: "jlpt filter", type: "segmented", options: [["n1", "N1"], ["n2", "N2"], ["n3", "N3"], ["n4", "N4"], ["n5", "N5"], ["all", "ALL"]] });
+    const searchGrid = fieldGrid(2);
+    renderField(searchGrid, { path: "search_target", label: "open results", type: "segmented", options: [["_self", "same tab"], ["_blank", "new tab"]] });
+    renderField(searchGrid, { path: "jlpt_level", label: "jlpt filter", type: "segmented", options: [["n1", "N1"], ["n2", "N2"], ["n3", "N3"], ["n4", "N4"], ["n5", "N5"], ["all", "ALL"]] });
+    body.appendChild(searchGrid);
     body.appendChild(el("div", "option-label", "engines"));
     const engineWrap = el("div", "list-editor");
     body.appendChild(engineWrap);

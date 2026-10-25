@@ -211,6 +211,32 @@ input::placeholder { color: var(--dimmer); }
 
 .form-row label.wide { width: auto; flex: 1; }
 
+/* ── FIELD GRIDS ─────────────────────────────────────────── */
+.form-grid {
+    display: grid;
+    grid-template-columns: repeat(var(--field-cols, 2), minmax(0, 1fr));
+    gap: 8px 20px;
+    margin-bottom: 8px;
+    align-items: start;
+}
+
+.form-grid .form-row {
+    margin-bottom: 0;
+    min-width: 0;
+}
+
+.form-grid .form-row.wide {
+    grid-column: 1 / -1;
+}
+
+@media (max-width: 980px) {
+    .form-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 680px) {
+    .form-grid { grid-template-columns: 1fr; }
+}
+
 .form-hint {
     font-size: 10px;
     color: var(--dimmer);
@@ -706,6 +732,13 @@ input::placeholder { color: var(--dimmer); }
 }
 
 /* ── CHECKBOX ROW (footer items) ─────────────────────────── */
+.check-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 24px;
+    margin-bottom: 8px;
+}
+
 .check-row {
     display: flex;
     align-items: center;
