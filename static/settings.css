@@ -1,0 +1,728 @@
+/* settings.css — the settings page. Ported from the mutabu extension's
+   settings page (same design language), adapted to muhomu's theme vars
+   and extended for the schema-driven config editor. */
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+    width: 100%;
+    min-height: 100%;
+    background: var(--bg);
+    color: var(--white);
+    font-family: var(--font-pixel);
+    font-size: 13px;
+}
+
+body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background: repeating-linear-gradient(
+        0deg,
+        transparent,
+        transparent 2px,
+        rgba(255,255,255,0.012) 2px,
+        rgba(255,255,255,0.012) 4px
+    );
+    pointer-events: none;
+    z-index: 0;
+}
+
+body.theme-light::before {
+    background: repeating-linear-gradient(
+        0deg,
+        transparent,
+        transparent 2px,
+        rgba(0,0,0,0.018) 2px,
+        rgba(0,0,0,0.018) 4px
+    );
+}
+
+a { color: var(--accent); text-decoration: none; }
+a:hover { color: var(--accent2); }
+
+/* ── LAYOUT ──────────────────────────────────────────────── */
+.page {
+    position: relative;
+    z-index: 1;
+    max-width: 1180px;
+    margin: 0 auto;
+    padding: 32px 20px 140px;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
+/* ── HEADER ──────────────────────────────────────────────── */
+.header {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 14px;
+}
+
+.header-title {
+    font-family: var(--font-doto);
+    font-size: 36px;
+    font-weight: 900;
+    color: var(--white);
+    letter-spacing: 4px;
+    line-height: 1;
+}
+
+.header-sub {
+    font-size: 10px;
+    color: var(--dimmer);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-top: 6px;
+}
+
+.back-btn {
+    background: none;
+    border: 1px solid var(--border);
+    color: var(--dim);
+    font-family: var(--font-pixel);
+    font-size: 11px;
+    padding: 6px 14px;
+    cursor: pointer;
+    letter-spacing: 1px;
+    transition: color 0.1s, border-color 0.1s;
+    text-decoration: none;
+}
+.back-btn:hover { color: var(--accent); border-color: var(--accent); }
+
+/* ── SECTIONS ──────────────────────────────────────────────
+   Flat list layout: no cards, no clip-path. Sections are just
+   headers (colored bar + label) dividing one continuous body. */
+.section { position: relative; }
+
+.section-title {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 14px;
+    font-weight: bold;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    padding: 30px 0 12px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 16px;
+}
+
+.st-bar {
+    width: 5px;
+    height: 16px;
+    flex-shrink: 0;
+}
+
+.st-bar.blue  { background: var(--accent);  box-shadow: 0 0 6px var(--accent);  }
+.st-bar.pink  { background: var(--accent2); box-shadow: 0 0 6px var(--accent2); }
+.st-bar.green { background: var(--accent3); box-shadow: 0 0 6px var(--accent3); }
+.st-bar.red   { background: var(--red);     box-shadow: 0 0 6px var(--red);     }
+
+.st-label { color: var(--white); font-weight: bold; }
+
+.section-body { padding: 0; }
+
+/* ── BUTTONS ─────────────────────────────────────────────── */
+.btn {
+    background: none;
+    border: 1px solid var(--border);
+    color: var(--dim);
+    font-family: var(--font-pixel);
+    font-size: 11px;
+    padding: 6px 14px;
+    cursor: pointer;
+    letter-spacing: 1px;
+    transition: color 0.1s, border-color 0.1s, background 0.1s;
+}
+
+.btn:hover { color: var(--white); border-color: var(--border-lt); }
+
+.btn.primary {
+    color: var(--accent);
+    border-color: var(--accent);
+}
+.btn.primary:hover { background: rgba(138, 180, 248, 0.08); }
+
+.btn.danger { color: var(--dim); }
+.btn.danger:hover { color: var(--red); border-color: var(--red); }
+
+.btn:disabled { opacity: 0.4; cursor: default; }
+.btn:disabled:hover { color: var(--dim); border-color: var(--border); }
+
+.icon-btn {
+    background: none;
+    border: 1px solid var(--border);
+    color: var(--dim);
+    width: 24px;
+    height: 24px;
+    line-height: 1;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    flex-shrink: 0;
+    transition: color 0.1s, border-color 0.1s;
+}
+.icon-btn:hover { color: var(--white); border-color: var(--border-lt); }
+.icon-btn.danger:hover { color: var(--red); border-color: var(--red); }
+.icon-btn:disabled { opacity: 0.3; cursor: default; }
+
+/* ── INPUTS ──────────────────────────────────────────────── */
+input[type="text"], input[type="url"], input[type="number"] {
+    background: var(--panel2);
+    border: 1px solid var(--border);
+    color: var(--white);
+    font-family: var(--font-pixel);
+    font-size: 12px;
+    padding: 7px 10px;
+    outline: none;
+    width: 100%;
+    transition: border-color 0.15s;
+}
+
+input[type="text"]:focus,
+input[type="url"]:focus,
+input[type="number"]:focus {
+    border-color: var(--accent);
+}
+
+input::placeholder { color: var(--dimmer); }
+
+/* ── FORM ROWS ───────────────────────────────────────────── */
+.form-row {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.form-row label {
+    font-size: 10px;
+    color: var(--dimmer);
+    letter-spacing: 1px;
+    width: 110px;
+    flex-shrink: 0;
+    text-transform: uppercase;
+}
+
+.form-row label.wide { width: auto; flex: 1; }
+
+.form-hint {
+    font-size: 10px;
+    color: var(--dimmer);
+    letter-spacing: 0.5px;
+    margin-top: 2px;
+}
+
+.form-btns {
+    display: flex;
+    gap: 6px;
+    justify-content: flex-end;
+    margin-top: 4px;
+}
+
+.option-label {
+    font-size: 10px;
+    color: var(--dimmer);
+    letter-spacing: 1px;
+    margin-bottom: 10px;
+    text-transform: uppercase;
+}
+
+.subsection-label {
+    font-size: 12px;
+    font-weight: bold;
+    color: var(--dim);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-bottom: 12px;
+    margin-top: 8px;
+    padding-top: 16px;
+    border-top: 1px solid var(--border);
+}
+
+/* ── OPTION GROUP (segmented buttons) ────────────────────── */
+.option-group {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.option-btn {
+    background: none;
+    border: 1px solid var(--border);
+    color: var(--dim);
+    font-family: var(--font-pixel);
+    font-size: 11px;
+    padding: 7px 16px;
+    cursor: pointer;
+    letter-spacing: 1px;
+    transition: color 0.1s, border-color 0.1s, background 0.1s;
+}
+
+.option-btn:hover { color: var(--white); border-color: var(--border-lt); }
+
+.option-btn.selected {
+    color: var(--accent);
+    border-color: var(--accent);
+    background: rgba(138, 180, 248, 0.08);
+}
+
+/* ── SELECTS ─────────────────────────────────────────────── */
+.form-select {
+    width: 100%;
+    background: var(--panel2);
+    border: 1px solid var(--border);
+    color: var(--white);
+    font-family: var(--font-pixel);
+    font-size: 11px;
+    padding: 7px 10px;
+    cursor: pointer;
+    letter-spacing: 1px;
+    appearance: none;
+    -webkit-appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23666'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 10px center;
+}
+
+.form-select:focus { outline: none; border-color: var(--accent); }
+.form-select option { background: var(--bg); font-size: 13px; }
+
+.form-select.small { width: auto; padding: 5px 24px 5px 8px; }
+
+/* ── IMAGE GRIDS ─────────────────────────────────────────── */
+.img-grid {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.img-slot {
+    width: 100px;
+    height: 100px;
+    border: 1px solid var(--border);
+    background: var(--panel2);
+    position: relative;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    gap: 6px;
+    transition: border-color 0.15s;
+    overflow: hidden;
+}
+
+.img-slot.bg-slot { width: 192px; height: 108px; }
+
+.img-slot:hover { border-color: var(--border-lt); }
+.img-slot.filled { border-color: var(--border-lt); }
+
+.img-slot img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+.img-slot .slot-label {
+    font-size: 9px;
+    color: var(--dimmer);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    max-width: 90%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.img-slot .slot-plus { font-size: 20px; color: var(--dimmer); line-height: 1; }
+
+.img-slot .slot-remove {
+    position: absolute;
+    top: 0; right: 0;
+    width: 20px; height: 20px;
+    background: var(--red);
+    color: #fff;
+    font-size: 11px;
+    line-height: 20px;
+    text-align: center;
+    cursor: pointer;
+    border: none;
+    padding: 0;
+    font-family: var(--font-pixel);
+    display: none;
+}
+
+.img-slot.filled:hover .slot-remove { display: block; }
+
+.img-slot input[type="file"] { display: none; }
+
+.img-hint {
+    font-size: 10px;
+    color: var(--dimmer);
+    letter-spacing: 1px;
+    margin-top: 10px;
+}
+
+.img-error {
+    display: none;
+    color: var(--red);
+    font-size: 10px;
+    letter-spacing: 1px;
+    margin: 6px 0;
+}
+.img-error.visible { display: block; }
+
+/* ── LIST ROWS (engines, quotes, footer items) ── */
+.list-editor { display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px; }
+
+.list-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 10px;
+    background: var(--panel2);
+    border: 1px solid var(--border);
+}
+
+.list-row.is-active { border-color: var(--accent); }
+
+.list-row .row-main {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.list-row .row-title {
+    font-size: 11px;
+    color: var(--white);
+    letter-spacing: 1px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.list-row .row-sub {
+    font-size: 10px;
+    color: var(--dimmer);
+    letter-spacing: 0.5px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.list-row .row-badge {
+    font-size: 9px;
+    color: var(--accent);
+    border: 1px solid var(--accent);
+    padding: 1px 6px;
+    letter-spacing: 1px;
+    flex-shrink: 0;
+}
+
+.row-actions {
+    display: flex;
+    gap: 4px;
+    flex-shrink: 0;
+    /* Pin the [×] button to the right edge of the row regardless of the
+       widget/column name's width — flex justify-content: space-between
+       would need a middle filler, margin-left: auto absorbs all the free
+       space in one go. */
+    margin-left: auto;
+}
+
+.add-form {
+    display: none;
+    flex-direction: column;
+    gap: 8px;
+    padding: 12px;
+    border: 1px solid var(--border);
+    background: var(--panel2);
+    margin-bottom: 12px;
+}
+.add-form.visible { display: flex; }
+
+/* ── LAYOUT EDITOR ─────────────────────────────────────────
+   The columns render side by side exactly like the page: small =
+   250px fixed, full = remaining width. Widgets stack inside them.
+   Dragging moves the item through the DOM to the slot under the
+   cursor, so it visibly occupies the place it would take on the
+   page. */
+.layout-grid {
+    display: grid;
+    gap: 12px;
+    align-items: start;
+    min-width: 0;
+    overflow-x: auto;
+    padding-bottom: 4px;
+}
+
+.layout-col {
+    border: 1px solid var(--border);
+    background: var(--panel2);
+    min-width: 0;
+}
+
+.layout-col-widgets {
+    padding: 6px 0;
+}
+
+/* header strip — mirrors the page's one-row header */
+.layout-header-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: stretch;
+    margin-bottom: 4px;
+}
+
+.header-chip {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 10px;
+    background: var(--panel2);
+    border: 1px solid var(--border);
+    cursor: grab;
+}
+
+/* widget options toggle in the widgets section rows */
+.list-row .w-opts-btn {
+    flex-shrink: 0;
+    background: none;
+    border: 1px solid var(--border);
+    color: var(--dim);
+    font-family: var(--font-pixel);
+    font-size: 10px;
+    letter-spacing: 1px;
+    padding: 4px 10px;
+    cursor: pointer;
+    transition: color 0.1s, border-color 0.1s;
+}
+.list-row .w-opts-btn:hover {
+    color: var(--accent);
+    border-color: var(--accent);
+}
+
+.layout-col-head {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 10px;
+    border-bottom: 1px solid var(--border);
+    background: var(--titlebar);
+}
+
+.layout-col-head .col-label {
+    font-size: 10px;
+    color: var(--dimmer);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    flex: 1;
+}
+
+.layout-col-head .form-select { width: auto; }
+
+.widget-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 8px;
+    border-bottom: 1px solid var(--border);
+}
+
+.widget-row:last-child { border-bottom: none; }
+
+.widget-row .w-id {
+    font-size: 11px;
+    color: var(--white);
+    letter-spacing: 1px;
+    min-width: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.widget-row .w-opts-btn {
+    flex: 1;
+    text-align: left;
+    background: none;
+    border: none;
+    color: var(--dimmer);
+    font-family: var(--font-pixel);
+    font-size: 10px;
+    letter-spacing: 0.5px;
+    cursor: pointer;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    padding: 0;
+}
+
+.widget-row .w-opts-btn:hover { color: var(--accent); }
+
+.widget-options {
+    display: none;
+    padding: 10px 12px;
+    border-top: 1px solid var(--border);
+    background: var(--panel);
+}
+
+.widget-options.visible { display: block; }
+
+.widget-options .form-row label { width: 120px; }
+
+.widget-options .opt-inline {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.split-children {
+    margin: 6px 0 0 16px;
+    padding-left: 12px;
+    border-left: 1px solid var(--border);
+}
+/* ── DRAG AND DROP (layout editor) ──────────────────────── */
+.drag-grip {
+    color: var(--dimmer);
+    font-size: 12px;
+    line-height: 1;
+    flex-shrink: 0;
+    cursor: grab;
+    user-select: none;
+}
+
+/* [+] chip at the end of the header strip — opens the picker */
+.header-add-btn {
+    background: none;
+    border: 1px dashed var(--border);
+    color: var(--dim);
+    font-family: var(--font-pixel);
+    font-size: 14px;
+    line-height: 1;
+    padding: 8px 12px;
+    cursor: pointer;
+    transition: color 0.1s, border-color 0.1s;
+}
+.header-add-btn:hover {
+    color: var(--accent);
+    border-color: var(--accent);
+}
+
+/* ── WIDGET PICKER POPUP ───────────────────────────────────
+   Anchored under a [+] button; a plain menu, no overlay/modal.
+   Lives in document.body, so layout re-renders never kill it. */
+.widget-picker {
+    display: none;
+    position: fixed;
+    z-index: 100;
+    min-width: 180px;
+    max-height: 320px;
+    overflow-y: auto;
+    flex-direction: column;
+    padding: 4px;
+    background: var(--panel2);
+    border: 1px solid var(--border);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+}
+.widget-picker.open { display: flex; }
+
+.widget-picker .picker-item {
+    background: none;
+    border: none;
+    text-align: left;
+    color: var(--white);
+    font-family: var(--font-pixel);
+    font-size: 11px;
+    letter-spacing: 1px;
+    padding: 7px 10px;
+    cursor: pointer;
+    white-space: nowrap;
+}
+.widget-picker .picker-item:hover {
+    background: var(--panel);
+    color: var(--accent);
+}
+
+.widget-row[draggable],
+.layout-col[draggable],
+.header-chip[draggable] {
+    cursor: grab;
+}
+
+.widget-row.dragging,
+.layout-col.dragging,
+.header-chip.dragging {
+    opacity: 0.35;
+}
+
+/* ── SAVE BAR ────────────────────────────────────────────── */
+.save-bar {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 20px;
+    background: var(--panel);
+    border-top: 1px solid var(--border);
+    backdrop-filter: blur(4px);
+    max-width: 1180px;
+    margin: 0 auto;
+}
+
+.save-bar .save-status {
+    flex: 1;
+    font-size: 10px;
+    color: var(--dimmer);
+    letter-spacing: 1px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.save-bar .save-status.ok { color: var(--accent3); }
+.save-bar .save-status.err { color: var(--red); }
+
+/* ── THEME PICKER ────────────────────────────────────────── */
+.theme-picker .theme-name {
+    font-size: 10px;
+    color: var(--dimmer);
+    letter-spacing: 1px;
+    margin-top: 6px;
+    text-align: center;
+}
+
+/* ── CHECKBOX ROW (footer items) ─────────────────────────── */
+.check-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 6px 0;
+    font-size: 11px;
+    color: var(--dim);
+    letter-spacing: 1px;
+    cursor: pointer;
+}
+
+.check-row input { accent-color: var(--accent); cursor: pointer; }
+
+/* ── SCROLLBAR ───────────────────────────────────────────── */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: var(--border-lt); }
+::-webkit-scrollbar-thumb:hover { background: var(--dim); }
+
+::selection { background: rgba(138, 180, 248, 0.25); color: var(--white); }

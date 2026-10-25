@@ -60,6 +60,28 @@
     }
   }
 
+  /* Favicons that fail to load (evicted cache file, flaky origin) swap
+     to a letter tile so the row never shows a broken-image glyph. */
+  document.addEventListener("error", function(e) {
+    var img = e.target;
+    if (!img || img.tagName !== "IMG" || !img.classList.contains("ql-fav")) return;
+    var a = img.closest("a[data-drag-index]");
+    if (!a) return;
+    var label = "";
+    for (var i = 0; i < a.childNodes.length; i++) {
+      var n = a.childNodes[i];
+      if (n.nodeType === 3 && String(n.nodeValue).trim()) {
+        label = String(n.nodeValue).trim();
+        break;
+      }
+    }
+    var letter = label ? label[0].toUpperCase() : "…";
+    var span = document.createElement("span");
+    span.className = "ql-fav-letter";
+    span.textContent = letter;
+    img.replaceWith(span);
+  }, true);
+
   if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", init);
   } else {

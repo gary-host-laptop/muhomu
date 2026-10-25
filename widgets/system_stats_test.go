@@ -78,14 +78,34 @@ func TestStatsGraphStaticElementsOutsideGroup(t *testing.T) {
 	if g == -1 {
 		t.Fatal("missing stats-scroll group")
 	}
-	gEnd := strings.Index(html[g:], "</g>") + g
 
-	// gridlines are rendered before the group (static)
+	// gridlines are rendered before the group (static reference frame)
 	if gi := strings.Index(html, `class="stats-grid"`); gi == -1 || gi > g {
 		t.Fatal("gridlines must be outside (before) the animated group")
 	}
-	// mid divider is rendered after the group (static)
-	if mi := strings.Index(html, `class="stats-mid"`); mi == -1 || mi < gEnd {
-		t.Fatal("mid divider must be outside (after) the animated group")
+}
+
+func TestStatsGraphGridlinePercentages(t *testing.T) {
+	// Both bands must carry gridlines at exactly 0 / 25 / 50 / 75%
+	// (sparkY maps 0% to the band bottom; 100% is deliberately omitted
+	// — a fried machine — so the top band has no edge line). The bottom
+	// band's 0% line is inset half a stroke (y=graphH-0.5) so it is not
+	// clipped thin at the viewBox edge.
+	html := string(statsGraph(SystemStats{}))
+	re := regexp.MustCompile(`<line class="stats-grid" x1="0" y1="([0-9.]+)"`)
+	matches := re.FindAllStringSubmatch(html, -1)
+	if len(matches) != 8 {
+		t.Fatalf("expected 8 gridlines (4 per band), got %d:\n%s", len(matches), html)
+	}
+	want := []string{"71.0", "53.2", "35.5", "17.8", // top: 0 25 50 75%
+		"149.5", "132.2", "114.5", "96.8"} // bottom: 0 25 50 75%
+	got := make([]string, len(matches))
+	for i, m := range matches {
+		got[i] = m[1]
+	}
+	for i, w := range want {
+		if got[i] != w {
+			t.Errorf("gridline %d: want y=%s, got y=%s", i, w, got[i])
+		}
 	}
 }

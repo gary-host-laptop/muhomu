@@ -50,6 +50,25 @@ func IsLocalFavicon(u string) bool {
 	return strings.HasPrefix(u, "/api/images/favicons/")
 }
 
+// IsExternalFavicon returns true if the url would make the browser fetch
+// from a third-party host. Rendering skips these in favor of a letter
+// tile so a page paint never contacts external icon servers; migrate-
+// FAVicons caches them server-side into /api/images/favicons/ over time.
+func IsExternalFavicon(u string) bool {
+	return strings.HasPrefix(u, "http://") || strings.HasPrefix(u, "https://")
+}
+
+// FavLetter returns the first rune of label, upper-cased, for the
+// fallback tile shown while a remote favicon isn't cached locally.
+// Empty labels fall back to a neutral placeholder.
+func FavLetter(label string) string {
+	r := []rune(label)
+	if len(r) == 0 {
+		return "…"
+	}
+	return strings.ToUpper(string(r[0]))
+}
+
 // GuessFaviconURL derives the duckduckgo favicon url from a page url.
 func GuessFaviconURL(pageURL string) string {
 	u, err := url.Parse(pageURL)

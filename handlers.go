@@ -69,6 +69,33 @@ func startStatsCollector() {
 	}()
 }
 
+// ── rss feed warmer ───────────────────────────────────────────
+// startRSSWarmer periodically refreshes every configured rss widget's
+// feeds (per-feed TTL / ETag rules apply as usual), so articles stay
+// fresh even while no browser is open and full-page renders — which
+// never touch the network — almost always find warm cache entries.
+// The config walk re-reads the current config on every tick, so
+// hot-reloaded feed lists are picked up without a restart.
+
+func startRSSWarmer() {
+	warmAll := func() {
+		for _, wcfg := range flattenWidgetConfigs(allWidgetConfigs()) {
+			if wcfg.ID != "rss" {
+				continue
+			}
+			widgets.WarmRSSCache(wcfg.Options, appCfg.faviconDir)
+		}
+	}
+
+	// Warm immediately at startup rather than after one period.
+	warmAll()
+	ticker := time.NewTicker(time.Minute)
+	defer ticker.Stop()
+	for range ticker.C {
+		warmAll()
+	}
+}
+
 func getCPUPercent() float64 {
 	f, _ := os.Open("/proc/stat")
 	defer f.Close()
@@ -78,23 +105,25 @@ func getCPUPercent() float64 {
 	if len(parts) < 8 {
 		return 0
 	}
-	user, _    := strconv.ParseUint(parts[1], 10, 64)
-	nice, _    := strconv.ParseUint(parts[2], 10, 64)
-	system, _  := strconv.ParseUint(parts[3], 10, 64)
-	idle, _    := strconv.ParseUint(parts[4], 10, 64)
-	iowait, _  := strconv.ParseUint(parts[5], 10, 64)
-	irq, _     := strconv.ParseUint(parts[6], 10, 64)
+	user, _ := strconv.ParseUint(parts[1], 10, 64)
+	nice, _ := strconv.ParseUint(parts[2], 10, 64)
+	system, _ := strconv.ParseUint(parts[3], 10, 64)
+	idle, _ := strconv.ParseUint(parts[4], 10, 64)
+	iowait, _ := strconv.ParseUint(parts[5], 10, 64)
+	irq, _ := strconv.ParseUint(parts[6], 10, 64)
 	softirq, _ := strconv.ParseUint(parts[7], 10, 64)
 
 	total := user + nice + system + idle + iowait + irq + softirq
 	if prevTotal == 0 {
-		prevIdle = idle; prevTotal = total
+		prevIdle = idle
+		prevTotal = total
 		return 0
 	}
 	deltaTotal := float64(total - prevTotal)
-	deltaIdle  := float64(idle - prevIdle)
+	deltaIdle := float64(idle - prevIdle)
 	cpu := 100 * (deltaTotal - deltaIdle) / deltaTotal
-	prevIdle = idle; prevTotal = total
+	prevIdle = idle
+	prevTotal = total
 	return cpu
 }
 
@@ -128,14 +157,16 @@ func getNetSpeeds() (rx, tx float64) {
 			parts := strings.Fields(line)
 			if len(parts) >= 10 {
 				rxBytes, _ = strconv.ParseUint(parts[1], 10, 64)
-				txBytes, _  = strconv.ParseUint(parts[9], 10, 64)
+				txBytes, _ = strconv.ParseUint(parts[9], 10, 64)
 				break
 			}
 		}
 	}
 	now := time.Now()
 	if prevNetTime.IsZero() {
-		prevNetRx = rxBytes; prevNetTx = txBytes; prevNetTime = now
+		prevNetRx = rxBytes
+		prevNetTx = txBytes
+		prevNetTime = now
 		return 0, 0
 	}
 	dt := now.Sub(prevNetTime).Seconds()
@@ -144,7 +175,9 @@ func getNetSpeeds() (rx, tx float64) {
 	}
 	rx = float64(rxBytes-prevNetRx) / dt / 1024
 	tx = float64(txBytes-prevNetTx) / dt / 1024
-	prevNetRx = rxBytes; prevNetTx = txBytes; prevNetTime = now
+	prevNetRx = rxBytes
+	prevNetTx = txBytes
+	prevNetTime = now
 	return rx, tx
 }
 
@@ -181,31 +214,41 @@ func fmtFooterSpeed(kbps float64) string {
 
 func buildFooterHTML(footerItems []string, s widgets.SystemStats) string {
 	var b strings.Builder
-	for i, item := range footerItems {
-		if i > 0 {
-			b.WriteString(`<span class="fi-sep">·</span>`)
-		}
+	written := 0
+	for _, item := range footerItems {
+		var stat string
 		switch item {
 		case "rx":
-			fmt.Fprintf(&b, `<span class="fi-item fi-rx" id="fi-rx">⬇ %s</span>`, fmtFooterSpeed(s.RX))
+			stat = fmt.Sprintf(`<span class="fi-item fi-rx" id="fi-rx">⬇ %s</span>`, fmtFooterSpeed(s.RX))
 		case "tx":
-			fmt.Fprintf(&b, `<span class="fi-item fi-tx" id="fi-tx">⬆ %s</span>`, fmtFooterSpeed(s.TX))
+			stat = fmt.Sprintf(`<span class="fi-item fi-tx" id="fi-tx">⬆ %s</span>`, fmtFooterSpeed(s.TX))
 		case "cpu":
-			fmt.Fprintf(&b, `<span class="fi-item fi-cpu" id="fi-cpu">◉ cpu %.1f%%</span>`, s.CPU)
+			stat = fmt.Sprintf(`<span class="fi-item fi-cpu" id="fi-cpu">◉ cpu %.1f%%</span>`, s.CPU)
 		case "ram":
-			fmt.Fprintf(&b, `<span class="fi-item fi-ram" id="fi-ram">◉ ram %.0f%%</span>`, s.RAM)
-		case "version":
-			// spacer before version pushes it to the right
-			if i > 0 {
-				b.WriteString(`<span class="fi-spacer"></span>`)
-			}
-			b.WriteString(`<span class="fi-version">v1.1.1</span>`)
+			stat = fmt.Sprintf(`<span class="fi-item fi-ram" id="fi-ram">◉ ram %.0f%%</span>`, s.RAM)
+		default:
+			continue
 		}
+		if written > 0 {
+			b.WriteString(`<span class="fi-sep">·</span>`)
+		}
+		b.WriteString(stat)
+		written++
 	}
+
+	// The version and GitHub link are fixed furniture: they always sit at
+	// the far right, regardless of footer_items order or membership.
+	b.WriteString(`<span class="fi-right">`)
+	b.WriteString(`<span class="fi-version">muhomu v` + version + `</span>`)
+	b.WriteString(`<span class="fi-sep">·</span>`)
+	b.WriteString(`<a class="fi-item fi-github" href="` + githubRepoURL +
+		`" target="_blank" rel="noopener" title="muhomu on GitHub" aria-label="muhomu on GitHub"><i class="ph-light ph-github-logo"></i></a>`)
+	b.WriteString(`</span>`)
 	return b.String()
 }
 
 func handleFooterStats(w http.ResponseWriter, r *http.Request) {
+	cfg := getConfig()
 	out := buildFooterHTML(cfg.FooterItems, currentSystemStats())
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.Header().Set("Cache-Control", "no-store")
@@ -245,6 +288,7 @@ func handleSearchBookmarks(w http.ResponseWriter, r *http.Request) {
 // ── GET /api/weather ──────────────────────────────────────────
 
 func handleWeather(w http.ResponseWriter, r *http.Request) {
+	cfg := getConfig()
 	lat := r.URL.Query().Get("lat")
 	lon := r.URL.Query().Get("lon")
 	if lat == "" || lon == "" {
@@ -434,5 +478,3 @@ func handleKotobaNext(w http.ResponseWriter, r *http.Request) {
 	pick := candidates[rand.Intn(len(candidates))]
 	jsonOK(w, pick)
 }
-
-

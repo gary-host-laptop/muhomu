@@ -37,6 +37,13 @@ type SystemStats struct {
 	History []StatsPoint
 }
 
+// SearchEngine is one selectable engine button under the search bar.
+type SearchEngine struct {
+	Name    string
+	URL     string
+	Default bool
+}
+
 // RenderContext carries the material conditions available to each widget
 // at render time. Widgets take only what they need from this context.
 type RenderContext struct {
@@ -54,6 +61,11 @@ type RenderContext struct {
 	DefaultLED     string
 	ConfigQuotes   []ConfigQuote
 	Options        map[string]interface{}
+	// Header widget inputs — populated by the coordinator for the
+	// header widgets (clock, identity, profile, search).
+	Username        string
+	ProfileImageURL string
+	SearchEngines   []SearchEngine
 	// Stats carries the latest system statistics snapshot for the
 	// system-stats widget. Set by the coordinator at render time.
 	Stats SystemStats
@@ -62,6 +74,12 @@ type RenderContext struct {
 	// image widget steps sequentially from ?current=, the quote widget
 	// avoids repeating the ?current= quote.
 	Query map[string]string
+	// Fragment reports whether this render serves an htmx fragment
+	// request (/api/widget/{id}) rather than the initial full-page
+	// render. Widgets with network-bound data paths may render
+	// cached-only placeholders on page load and defer actual fetching
+	// to fragment requests, so page paint never waits on the network.
+	Fragment bool
 }
 
 // Widget is the interface every widget implements. Its two methods
@@ -70,6 +88,16 @@ type RenderContext struct {
 type Widget interface {
 	ID() string
 	Render(ctx RenderContext) (template.HTML, error)
+}
+
+// HeaderWidget is the optional interface for widgets that can render in
+// the header strip. Unlike body widgets, header widgets render their
+// content WITHOUT the standard widget chrome (title bar, LED, box) —
+// the header is a bare horizontal strip. Widgets that don't implement
+// it still render in the header, but with their full body chrome.
+type HeaderWidget interface {
+	ID() string
+	RenderHeader(ctx RenderContext) (template.HTML, error)
 }
 
 // Registry returns the map of all available widgets keyed by their id.
@@ -92,6 +120,13 @@ func Registry() map[string]Widget {
 		&WeatherWidget{},
 		&CalendarWidget{},
 		&SplitColumnWidget{},
+
+		// Header widgets — render in the header strip (RenderHeader)
+		// or as ordinary boxed widgets in the body (Render).
+		&ClockWidget{},
+		&IdentityWidget{},
+		&ProfileWidget{},
+		&SearchWidget{},
 	}
 	m := make(map[string]Widget, len(all))
 	for _, w := range all {
@@ -99,6 +134,23 @@ func Registry() map[string]Widget {
 	}
 	return m
 }
+
+// ── Re-rendering convention: swap the WHOLE widget ────────────
+// Every htmx re-render of a widget swaps the entire widget root:
+//
+//	hx-target="closest .widget" hx-swap="outerHTML"
+//
+// against a fragment endpoint that returns what wrap() produces (see
+// writeWidget in widget_api.go). Chrome and content therefore always come
+// from one server render, keeping Go the single source of truth for the
+// markup.
+//
+// Never swap a fragment into a sub-element of a widget (a body div, a
+// list): those fragments are full widgets, titlebar included, so the
+// incoming chrome nests inside the existing one and the widget shows two
+// titlebars — the weather widget's original bug. The hx-trigger may live
+// on the body div (system-stats, rss do this so their poll re-arms with
+// each render), but the target is always closest .widget.
 
 // wrap produces the outer widget chrome (title bar + body container)
 // around inner html. All widgets share this structure.

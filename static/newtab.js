@@ -51,7 +51,7 @@ function miniPrompt(fields, prefill, opts) {
     const overlay = document.createElement("div");
     overlay.style.cssText = `position:fixed;inset:0;z-index:10000;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.6)`;
     const box = document.createElement("div");
-    box.style.cssText = `background:var(--panel);border:1px solid var(--border-lt);padding:20px;display:flex;flex-direction:column;gap:10px;min-width:280px;clip-path:polygon(0 0,100% 0,100% calc(100% - 10px),calc(100% - 14px) 100%,0 100%)`;
+    box.style.cssText = `background:var(--panel);border:1px solid var(--border-lt);padding:20px;display:flex;flex-direction:column;gap:10px;min-width:280px`;
     const inputs = {};
     fields.forEach(({ key, placeholder }) => {
       const inp = document.createElement("input");
@@ -102,11 +102,15 @@ function miniPrompt(fields, prefill, opts) {
   });
 }
 
-/* ── EDIT MODE ──────────────────────────────────────────────── */
+/* ── EDIT MODE ────────────────────────────────────────────────
+   The edit-toggle lives in the identity header widget, which is
+   configurable — guard against it being absent. */
 const editToggle = document.getElementById("edit-toggle");
-editToggle.addEventListener("click", () => {
-  document.body.classList.toggle("edit-mode");
-});
+if (editToggle) {
+  editToggle.addEventListener("click", () => {
+    document.body.classList.toggle("edit-mode");
+  });
+}
 
 /* ── SETTINGS ───────────────────────────────────────────────── */
 // settings page removed — configuration lives in config.yaml
@@ -128,7 +132,7 @@ function linkPrompt(prefill) {
     const overlay = document.createElement("div");
     overlay.style.cssText = `position:fixed;inset:0;z-index:10000;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.65)`;
     const box = document.createElement("div");
-    box.style.cssText = `background:var(--panel);border:1px solid var(--border-lt);padding:18px;display:flex;flex-direction:column;gap:10px;min-width:300px;clip-path:polygon(0 0,100% 0,100% calc(100% - 10px),calc(100% - 14px) 100%,0 100%)`;
+    box.style.cssText = `background:var(--panel);border:1px solid var(--border-lt);padding:18px;display:flex;flex-direction:column;gap:10px;min-width:300px`;
     const s = (el, css) => { el.style.cssText = css; return el; };
     const inp = (ph) => {
       const i = document.createElement("input");
@@ -335,9 +339,11 @@ function tick() {
     greetingSet = getGreetingStrings(rawH, window._uiLang);
     setGreeting(document.getElementById("greeting"),
       greetingSet[Math.floor(Math.random() * greetingSet.length)]);
-    document.getElementById("date").textContent =
-      `${DAYS[now.getDay()].toUpperCase()} · ${MONTHS[now.getMonth()].toUpperCase()} ${now.getDate()} · ${now.getFullYear()}`;
-
+    const dateEl = document.getElementById("date");
+    if (dateEl) {
+      dateEl.textContent =
+        `${DAYS[now.getDay()].toUpperCase()} · ${MONTHS[now.getMonth()].toUpperCase()} ${now.getDate()} · ${now.getFullYear()}`;
+    }
   }
 }
 
@@ -375,20 +381,11 @@ let activeEngine = null;
   }
 })();
 
-/* ── PROFILE TAGLINE ─────────────────────────────────────────── */
-(function () {
-  const el = document.getElementById("profile-tagline");
-  if (!el) return;
-  const data = window.__INITIAL_DATA__ || {};
-  const taglines = data.nt_taglines;
-  if (taglines && taglines.length > 0) {
-    el.textContent = taglines[Math.floor(Math.random() * taglines.length)];
-  }
-})();
-
-/* ── FOCUS SEARCH ON KEYPRESS ───────────────────────────────── */
+/* ── FOCUS SEARCH ON KEYPRESS ─────────────────────────────────
+   The search widget is configurable — guard against it being absent. */
 document.addEventListener("keydown", (e) => {
   const el = document.getElementById("search-input");
+  if (!el) return;
   const tag = document.activeElement.tagName;
   if (tag === "INPUT" || tag === "TEXTAREA") return;
   if (!e.ctrlKey && !e.metaKey && !e.altKey && e.key.length === 1) {

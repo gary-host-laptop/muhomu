@@ -15,8 +15,9 @@ import (
 // Forecast data doesn't change minute-to-minute, so one fetch per
 // hour is more than enough and avoids rate limits.
 type cachedWeather struct {
-	data      []byte
-	expiresAt time.Time
+	data        []byte
+	expiresAt   time.Time
+	lastAttempt time.Time
 }
 
 var (
@@ -40,10 +41,10 @@ type openMeteoResponse struct {
 		Temperature string `json:"temperature_2m"`
 	} `json:"current_units"`
 	Current struct {
-		Time          string  `json:"time"`
-		Temperature   float64 `json:"temperature_2m"`
-		ApparentTemp  float64 `json:"apparent_temperature"`
-		WeatherCode   int     `json:"weather_code"`
+		Time         string  `json:"time"`
+		Temperature  float64 `json:"temperature_2m"`
+		ApparentTemp float64 `json:"apparent_temperature"`
+		WeatherCode  int     `json:"weather_code"`
 	} `json:"current"`
 	Daily struct {
 		TempMax     []float64 `json:"temperature_2m_max"`
@@ -78,7 +79,51 @@ func (w *WeatherWidget) Render(ctx RenderContext) (template.HTML, error) {
 		weatherCacheMu.Unlock()
 	}
 
-	// ── Cache miss or expired — fetch from Open-Meteo ──
+	// ── Cold or expired. A full-page render must never block on the
+	// network: it renders a placeholder that htmx swaps out by fetching
+	// the widget fragment — the only path that actually (re)fetches.
+	// Previously a new tab with an expired hourly cache froze the page
+	// for up to five seconds waiting on Open-Meteo.
+	if ctx.Fragment {
+		if data := fetchWeather(cacheKey, lat, lon); data != nil {
+			return renderWeather(ctx, *data, city), nil
+		}
+		return wrap(ctx, "weather", "天気", "",
+			`<div class="widget-body"><div class="weather-empty">fetch failed</div></div>`), nil
+	}
+
+	// Swapping the whole widget root (not just this body) is the rule for
+	// every widget re-render — see wrap in widget.go. The fragment endpoint
+	// returns a complete widget, titlebar included, so targeting ".widget"
+	// keeps exactly one titlebar; targeting the body would nest a second one.
+	placeholder := `<div class="widget-body" hx-get="/api/widget/weather" hx-trigger="load" hx-target="closest .widget" hx-swap="outerHTML"><div class="weather-empty">…</div></div>`
+	return wrap(ctx, "weather", "天気", "", placeholder), nil
+}
+
+// fetchWeather retrieves and caches Open-Meteo data. Concurrent fetches
+// are throttled to one network attempt per 10s per location: when
+// several tabs open within the same hour, only the first fragment
+// actually fetches; the others re-serve the cached bytes (fine even a
+// little stale) instead of piling requests onto the API.
+func fetchWeather(cacheKey, lat, lon string) *openMeteoResponse {
+	weatherCacheMu.Lock()
+	cached := weatherCache[cacheKey]
+	if cached != nil && time.Since(cached.lastAttempt) < 10*time.Second {
+		weatherCacheMu.Unlock()
+		if cached.data != nil {
+			var data openMeteoResponse
+			if err := json.Unmarshal(cached.data, &data); err == nil {
+				return &data
+			}
+		}
+		return nil
+	}
+	if weatherCache[cacheKey] == nil {
+		weatherCache[cacheKey] = &cachedWeather{}
+	}
+	weatherCache[cacheKey].lastAttempt = time.Now()
+	weatherCacheMu.Unlock()
+
 	url := fmt.Sprintf(
 		"https://api.open-meteo.com/v1/forecast?latitude=%s&longitude=%s"+
 			"&current=temperature_2m,apparent_temperature,weather_code"+
@@ -90,32 +135,28 @@ func (w *WeatherWidget) Render(ctx RenderContext) (template.HTML, error) {
 	client := &http.Client{Timeout: 5 * time.Second}
 	resp, err := client.Get(url)
 	if err != nil {
-		return wrap(ctx, "weather", "天気", "",
-			`<div class="widget-body"><div class="weather-empty">fetch failed</div></div>`), nil
+		return nil
 	}
 	defer resp.Body.Close()
-
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return wrap(ctx, "weather", "天気", "",
-			`<div class="widget-body"><div class="weather-empty">fetch failed</div></div>`), nil
+		return nil
 	}
 
 	// Cache the raw response until the next hour
 	weatherCacheMu.Lock()
 	weatherCache[cacheKey] = &cachedWeather{
-		data:      body,
-		expiresAt: nextHour(),
+		data:        body,
+		expiresAt:   nextHour(),
+		lastAttempt: time.Now(),
 	}
 	weatherCacheMu.Unlock()
 
 	var data openMeteoResponse
 	if err := json.Unmarshal(body, &data); err != nil {
-		return wrap(ctx, "weather", "天気", "",
-			`<div class="widget-body"><div class="weather-empty">parse failed</div></div>`), nil
+		return nil
 	}
-
-	return renderWeather(ctx, data, city), nil
+	return &data
 }
 
 // renderWeather builds the weather widget HTML from parsed data.

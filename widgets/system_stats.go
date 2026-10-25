@@ -16,19 +16,22 @@ func (w *SystemStatsWidget) Render(ctx RenderContext) (template.HTML, error) {
 	return wrap(ctx, "system-stats", "システム", "", body), nil
 }
 
-// statsPollAttrs drives the htmx polling of this widget. The body re-fetches
-// its own markup every 2s from the widget fragment endpoint; hx-select pulls
-// just this body's content out of the full widget response, and
-// hx-swap="innerHTML" swaps content in without replacing this element — so
-// the hx attributes (and the poll) survive every update. The whole widget is
-// still re-rendered server-side each poll, keeping Go as the single source
-// of truth for the markup.
+// statsPollAttrs drives the htmx polling of this widget. Each poll re-fetches
+// the WHOLE widget from the fragment endpoint and swaps the widget root
+// (hx-target="closest .widget", hx-swap="outerHTML") — the full-widget swap
+// every widget uses, so chrome and content always come from a single render
+// (see the convention documented above wrap in widget.go).
+//
+// The trigger lives on the body div rather than the root: the body is
+// re-rendered along with the widget, so each poll re-arms exactly one timer
+// and the swap removes the root the old timer belonged to.
 //
 // The scroll glide in static/newtab.css runs for exactly one poll period
 // (2s), so each freshly-swapped line settles into place just as the next
 // fragment arrives — if you change this period, change the animation
-// duration to match.
-const statsPollAttrs = ` hx-get="/api/widget/system-stats" hx-trigger="every 2s" hx-target="this" hx-swap="innerHTML" hx-select="#stats-body"`
+// duration to match. Re-creating the graph on every poll is what re-enters
+// the glide at translateX(0), so the full-widget swap leaves it unchanged.
+const statsPollAttrs = ` hx-get="/api/widget/system-stats" hx-trigger="every 2s" hx-target="closest .widget" hx-swap="outerHTML"`
 
 func renderStatsBody(s SystemStats) string {
 	return `<div class="widget-body" id="stats-body" style="padding:6px"` + statsPollAttrs + `>` + statsGraph(s) + `</div>`
@@ -99,10 +102,21 @@ func statsGraph(s SystemStats) string {
 	b.WriteString(`<div class="stats-graph">`)
 	b.WriteString(`<svg class="stats-canvas" viewBox="0 0 300 150" preserveAspectRatio="none" aria-hidden="true">`)
 
-	// gridlines — same positions as the old canvas loop (5 per half,
-	// sharing the midpoint)
-	for _, y := range []float64{0, 19, 38, 56, 75, 94, 113, 131, 150} {
-		fmt.Fprintf(&b, `<line class="stats-grid" x1="0" y1="%.0f" x2="300" y2="%.0f"/>`, y, y)
+	// gridlines — percentage reference lines on both bands, marking
+	// 0% / 25% / 50% / 75% of each band (0% at the band's bottom edge).
+	// 100% is deliberately omitted: that would mean the machine is
+	// fried, and the line just clutters the top. The bottom band's 0%
+	// line (y=graphH) sits on the viewBox edge, where half its 0.5px
+	// stroke would be clipped thin — inset it by half a stroke so every
+	// line renders at the same weight.
+	for _, band := range []float64{0, bandOff} {
+		for _, pct := range []float64{0, 25, 50, 75} {
+			y := sparkY(pct, band)
+			if y > graphH-0.5 {
+				y = graphH - 0.5
+			}
+			fmt.Fprintf(&b, `<line class="stats-grid" x1="0" y1="%.1f" x2="300" y2="%.1f"/>`, y, y)
+		}
 	}
 
 	if len(s.History) >= 2 {
@@ -137,8 +151,6 @@ func statsGraph(s SystemStats) string {
 		b.WriteString(`</g>`)
 	}
 
-	// mid divider drawn last so it overlays the fills, like the canvas
-	b.WriteString(`<line class="stats-mid" x1="0" y1="75" x2="300" y2="75"/>`)
 	b.WriteString(`</svg>`)
 
 	// corner labels (HTML so they are not distorted by the SVG stretch)

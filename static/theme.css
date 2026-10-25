@@ -72,7 +72,7 @@ body.theme-light #edit-toggle,
 body.theme-light #settings-btn {
     color: var(--dim);
     border-color: var(--border-lt);
-    background: none;
+    background: var(--panel);
 }
 body.theme-light #edit-toggle:hover {
     color: var(--accent2);
@@ -85,7 +85,7 @@ body.theme-light #settings-btn:hover {
 body.theme-light.edit-mode #edit-toggle {
     color: var(--accent2);
     border-color: var(--accent2);
-    background: rgba(196, 160, 248, 0.08);
+    background: var(--panel2);
 }
 
 body.theme-light .wt-act,

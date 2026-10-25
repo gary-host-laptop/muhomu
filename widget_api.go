@@ -23,11 +23,57 @@ import (
 // Both return exactly the HTML a full page render would produce, so the
 // Go widget renderer is the single source of truth for widget markup.
 
-// allWidgetConfigs flattens the configured columns into a widget list.
+// allWidgetConfigs flattens the configured header and columns into a
+// widget list.
 func allWidgetConfigs() []WidgetConfig {
+	cfg := getConfig()
 	var out []WidgetConfig
+	out = append(out, cfg.Header...)
 	for _, col := range cfg.Columns {
 		out = append(out, col.Widgets...)
+	}
+	return out
+}
+
+// flattenWidgetConfigs expands split-column children into plain
+// WidgetConfigs (same child-shape parsing as widgetConfigFor),
+// recursing so nested splits are handled too.
+func flattenWidgetConfigs(cfgs []WidgetConfig) []WidgetConfig {
+	var out []WidgetConfig
+	for _, w := range cfgs {
+		if w.ID != "split-column" {
+			out = append(out, w)
+			continue
+		}
+		rawChildren, ok := w.Options["widgets"].([]interface{})
+		if !ok {
+			continue
+		}
+		var childConfigs []WidgetConfig
+		for _, raw := range rawChildren {
+			m, ok := raw.(map[string]interface{})
+			if !ok {
+				continue
+			}
+			cid, _ := m["id"].(string)
+			if cid == "" {
+				cid, _ = m["type"].(string)
+			}
+			if cid == "" {
+				continue
+			}
+			opts, _ := m["options"].(map[string]interface{})
+			if opts == nil {
+				opts = make(map[string]interface{})
+			}
+			for k, v := range m {
+				if k != "id" && k != "type" && k != "options" {
+					opts[k] = v
+				}
+			}
+			childConfigs = append(childConfigs, WidgetConfig{ID: cid, Options: opts})
+		}
+		out = append(out, flattenWidgetConfigs(childConfigs)...)
 	}
 	return out
 }
@@ -82,6 +128,7 @@ func widgetConfigFor(id string) (WidgetConfig, bool) {
 // and by the widget fragment endpoints. rng may be nil to allocate a
 // fresh one.
 func widgetRenderContext(rng *rand.Rand, opts map[string]interface{}) widgets.RenderContext {
+	cfg := getConfig()
 	if rng == nil {
 		rng = rand.New(rand.NewSource(time.Now().UnixNano()))
 	}
@@ -89,22 +136,28 @@ func widgetRenderContext(rng *rand.Rand, opts map[string]interface{}) widgets.Re
 	for i, q := range quotes {
 		configQuotes[i] = widgets.ConfigQuote{Text: q.Text, Author: q.Author}
 	}
+	searchEngines := make([]widgets.SearchEngine, len(cfg.SearchEngines))
+	for i, e := range cfg.SearchEngines {
+		searchEngines[i] = widgets.SearchEngine{Name: e.Name, URL: e.URL, Default: e.Default}
+	}
 	return widgets.RenderContext{
-		DB:             db,
-		RNG:            rng,
-		FaviconDir:     appCfg.faviconDir,
-		ProfileDir:     appCfg.profileDir,
-		BGDir:          appCfg.bgDir,
-		WidgetImageDir: appCfg.widgetImagesDir,
-		JLPTLevel:      cfg.JLPTLevel,
-		TitleLang:      cfg.TitleLang,
-		LocationCity:   cfg.Location.City,
-		LocationLat:    cfg.Location.Lat,
-		LocationLon:    cfg.Location.Lon,
-		DefaultLED:     cfg.DefaultLED,
-		ConfigQuotes:   configQuotes,
-		Options:        opts,
-		Stats:          currentSystemStats(),
+		DB:              db,
+		RNG:             rng,
+		FaviconDir:      appCfg.faviconDir,
+		ProfileDir:      appCfg.profileDir,
+		BGDir:           appCfg.bgDir,
+		WidgetImageDir:  appCfg.widgetImagesDir,
+		JLPTLevel:       cfg.JLPTLevel,
+		TitleLang:       cfg.TitleLang,
+		LocationCity:    cfg.Location.City,
+		LocationLat:     cfg.Location.Lat,
+		LocationLon:     cfg.Location.Lon,
+		DefaultLED:      cfg.DefaultLED,
+		ConfigQuotes:    configQuotes,
+		Username:        cfg.Username,
+		SearchEngines:   searchEngines,
+		Options:         opts,
+		Stats:           currentSystemStats(),
 	}
 }
 
@@ -136,6 +189,9 @@ func handleWidgetGet(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	ctx := widgetRenderContext(nil, wcfg.Options)
+	// Fragment renders may fetch fresh data (the full page render must
+	// not — see RenderContext.Fragment).
+	ctx.Fragment = true
 	ctx.Query = map[string]string{}
 	for k := range r.URL.Query() {
 		ctx.Query[k] = r.URL.Query().Get(k)

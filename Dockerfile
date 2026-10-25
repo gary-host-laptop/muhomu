@@ -6,7 +6,10 @@ COPY go.mod go.sum ./
 RUN go mod download
 
 COPY . .
-RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w" -o muhomu .
+
+# VERSION is baked into the binary and shown in the footer as "muhomu v…".
+ARG VERSION=1.1.1
+RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w -X main.version=${VERSION}" -o muhomu .
 
 # ── Final image ──────────────────────────────────────────────────────────────
 FROM alpine:latest
@@ -14,7 +17,7 @@ FROM alpine:latest
 LABEL org.opencontainers.image.title="muhomu"
 LABEL org.opencontainers.image.description="A customizable browser new tab dashboard"
 LABEL org.opencontainers.image.source="https://github.com/gary-host-laptop/muhomu"
-LABEL org.opencontainers.image.licenses="MIT"
+LABEL org.opencontainers.image.licenses="AGPL-3.0"
 
 RUN apk --no-cache add ca-certificates tzdata
 

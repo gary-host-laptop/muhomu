@@ -6,6 +6,13 @@
         <style>{{.CriticalStyle}}</style>
         <link rel="stylesheet" href="/static/theme.css" />
         <style>{{.FontStyle}}</style>
+        <!-- Preload the fonts used by first paint. With font-display:
+             swap the page renders with fallbacks instantly and the
+             preload lets the webfonts arrive sooner for the swap. -->
+        <link rel="preload" as="font" type="font/ttf" crossorigin href="/static/assets/fonts/Inter-VariableFont_opsz,wght.ttf" />
+        <link rel="preload" as="font" type="font/ttf" crossorigin href="/static/assets/fonts/DotGothic16-Regular.ttf" />
+        <link rel="preload" as="font" type="font/ttf" crossorigin href="/static/assets/fonts/Orbitron-VariableFont_wght.ttf" />
+        <link rel="preload" as="font" type="font/woff2" crossorigin href="/static/assets/fonts/Phosphor-Light.woff2" />
         <link rel="stylesheet" href="/static/phosphor-light.css" />
         <link rel="stylesheet" href="/static/newtab.css" />
         {{.ThemeCSSLinks}}
@@ -19,51 +26,25 @@
         <div id="crt"></div>
         <div id="ctx-menu"></div>
         <div class="page">
-            <!-- ── HEADER ─────────────────────────────────────────── -->
+            <!-- ── HEADER ───────────────────────────────────────────
+                 The header strip is a widget list (config `header`),
+                 rendered chrome-less left to right. Default: clock,
+                 identity, profile. -->
             <header class="header">
-                <div class="clock-block">
-                    <div id="clock">00:00:00</div>
-                    <div id="date">loading...</div>
-                </div>
-                <div class="header-right">
-                    <div class="header-right-text">
-                        <div class="header-btns">
-                            <button id="edit-toggle" title="edit mode">
-                                <i class="ph-light ph-pencil-simple"></i>
-                            </button>
-                            <button id="settings-btn" title="settings">
-                                <i class="ph-light ph-gear-six"></i>
-                            </button>
-                        </div>
-                        <div class="header-name-block">
-                            <span id="greeting">こんにちは</span>
-                            <span id="username">{{.Username}}</span>
-                            <span id="profile-tagline"></span>
-                        </div>
-                        <span class="header-deco">▌│█│▌│█ ▌│▌█</span>
-                    </div>
-                    <div id="header-avatar-wrap">
-                        <div id="header-avatar">{{if .ProfileImageURL}}<img src="{{.ProfileImageURL}}" alt="" style="width:100%;height:100%;object-fit:cover;">{{end}}</div>
-                        <span class="av-corner tl"></span>
-                        <span class="av-corner tr"></span>
-                        <span class="av-corner bl"></span>
-                        <span class="av-corner br"></span>
-                    </div>
-                </div>
+                {{ .HeaderHTML }}
             </header>
 
-            <!-- ── SEARCH ─────────────────────────────────────────── -->
+            <!-- ── SEARCH STRIP ────────────────────────────────────────
+                 The search widget's classic home. Rendered only when
+                 search isn't placed in the header or in a column. -->
+            {{ if .SearchStripHTML }}
             <div>
                 <div class="accent-strip">
                     <span></span><span></span><span></span>
                 </div>
-                <div class="search-bar">
-                    <input type="text" id="search-input" placeholder="search..." autocomplete="off" />
-                </div>
-                <div class="search-engines">
-                    {{ .SearchEnginesHTML }}
-                </div>
+                {{ .SearchStripHTML }}
             </div>
+            {{ end }}
 
             <!-- ── MAIN GRID ───────────────────────────────────────── -->
             <div class="grid" style="--grid-cols: {{.GridCols}};">

@@ -37,10 +37,11 @@
   var pendingScrollRestore = false;
   var savedScrollTop = 0;
 
-  // Height is a fixed CSS constant (see newtab.css): the bookmarks
-  // widget body has a designed height and every view — root listing or
-  // folder — gets the same box, scrolling internally when content
-  // overflows. Nothing in JS measures or sizes the widget.
+  // Height is fixed per the config "rows" option (default 3): the
+  // server emits --bm-rows on the widget body (see newtab.css) and
+  // every view — root listing or folder — gets the same fixed-height
+  // box, scrolling internally when content overflows. Nothing in JS
+  // measures or sizes the widget.
 
   function saveAndRender(next) {
     var root = widget();
@@ -70,6 +71,15 @@
   // By the time it is visible, the layout is final — there is no
   // pre-layout frame left to flash. The swap is atomic: the old widget
   // is replaced by the fully-laid-out new one in a single step.
+  //
+  // Second flash source: the favicon IMAGES themselves. Layout can be
+  // forced synchronously, but the downloads finish asynchronously — an
+  // uncached icon pops in over the visible widget a moment after the
+  // swap (cached icons are instant, so the flash only shows the first
+  // time a folder is opened). Fix: hold the swap until every favicon
+  // has loaded or failed in the off-screen holder (images load there
+  // normally), capped by a timeout so a slow favicon can't hang the
+  // swap.
   document.addEventListener("htmx:beforeSwap", function(e) {
     var detail = e.detail || {};
     var target = detail.target;
@@ -95,22 +105,59 @@
       return;
     }
 
-    // 2. Atomic swap: the settled widget replaces the old one.
-    target.parentNode.replaceChild(fresh, target);
-    holder.remove();
+    // 2. Swap once the favicons are ready (loaded, failed, or timed
+    //    out) — see the note above.
+    var imgs = fresh.querySelectorAll("img.fav");
+    var pending = imgs.length;
+    var swapped = false;
+    function swap() {
+      if (swapped) return;
+      swapped = true;
+      if (!target.parentNode) {
+        holder.remove();
+        return;
+      }
 
-    // 3. Scroll restore for POST re-renders (handled here because the
-    //    default swap — and its afterSwap event — was prevented).
-    if (pendingScrollRestore) {
-      pendingScrollRestore = false;
-      var sc = scrollContainer();
-      if (sc) sc.scrollTop = savedScrollTop;
+      // 3. Atomic swap: the settled widget replaces the old one.
+      target.parentNode.replaceChild(fresh, target);
+      holder.remove();
+
+      // 4. Scroll restore for POST re-renders (handled here because the
+      //    default swap — and its afterSwap event — was prevented).
+      if (pendingScrollRestore) {
+        pendingScrollRestore = false;
+        var sc = scrollContainer();
+        if (sc) sc.scrollTop = savedScrollTop;
+      }
+
+      // 5. Do what htmx would have done: process the new subtree's hx-*
+      //    attributes and fire htmx:load so the CRUD handlers bind.
+      if (window.htmx && htmx.process) htmx.process(fresh);
+      if (window.htmx && htmx.trigger) htmx.trigger(fresh, "htmx:load");
     }
 
-    // 4. Do what htmx would have done: process the new subtree's hx-*
-    //    attributes and fire htmx:load so the CRUD handlers bind.
-    if (window.htmx && htmx.process) htmx.process(fresh);
-    if (window.htmx && htmx.trigger) htmx.trigger(fresh, "htmx:load");
+    if (pending === 0) {
+      swap();
+    } else {
+      // complete covers both loaded and failed images, so a broken
+      // favicon never blocks the swap.
+      imgs.forEach(function(img) {
+        if (img.complete) { pending--; return; }
+        img.addEventListener("load", function() {
+          pending--;
+          if (pending === 0) swap();
+        });
+        img.addEventListener("error", function() {
+          pending--;
+          if (pending === 0) swap();
+        });
+      });
+      if (pending === 0) {
+        swap();
+      } else {
+        setTimeout(swap, 1500);
+      }
+    }
   });
 
   // After a drag ends, browsers may fire a click on the dragged row —

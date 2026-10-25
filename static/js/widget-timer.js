@@ -6,10 +6,26 @@
   const secInput=document.getElementById("timer-sec");
   const startBtn=document.getElementById("timer-start");
   const resetBtn=document.getElementById("timer-reset");
+  // ── alarm volume ─────────────────────────────────────────────
+  // The "vol" row mirrors the rain widget's master slider (same markup),
+  // and the value is persisted the same way, so the alarm is never louder
+  // than the user last asked for.
+  const STORAGE_KEY="nt_timer_volume";
+  const volSlider=document.getElementById("timer-vol");
+  let alarmVol=1;
+  try{
+    const raw=localStorage.getItem(STORAGE_KEY);
+    if(raw!==null){
+      const v=parseFloat(raw);
+      if(!isNaN(v))alarmVol=Math.min(1,Math.max(0,v));
+    }
+  }catch(e){}
+  if(volSlider)volSlider.value=String(alarmVol);
   let alarm=null;
   function getAlarm(){
     if(!alarm){
       alarm=new Audio("/static/assets/sounds/alarm.mp3");
+      alarm.volume=alarmVol;
       alarm.addEventListener("ended",releaseAlarm);
     }
     return alarm;
@@ -56,4 +72,9 @@
   });
   const trashBtn=document.getElementById("timer-trash");
   if(trashBtn)trashBtn.addEventListener("click",()=>resetBtn.click());
+  if(volSlider)volSlider.addEventListener("input",(e)=>{
+    alarmVol=parseFloat(e.target.value);
+    if(alarm)alarm.volume=alarmVol;
+    try{localStorage.setItem(STORAGE_KEY,String(alarmVol));}catch(err){}
+  });
 })();
