@@ -1,0 +1,6 @@
+<div class="widget-body" style="--bm-rows:{{.Rows}}"><div class="folder-tiles" id="folder-list" data-folder="-1">{{range $i, $folder := .Folders}}<div class="folder-tile" tabindex="0" role="button" draggable="true" data-drag-index="{{$i}}" title="open folder"
+  hx-get="/api/widget/bookmarks?folder={{$i}}" hx-target="closest .widget" hx-swap="outerHTML">
+  <i class="ph-light ph-folder" aria-hidden="true"></i>
+  <span class="folder-name">{{$folder.Folder}}</span>
+  <button class="tile-edit" title="edit folder"><i class="ph-light ph-pencil-simple"></i></button>
+</div>{{end}}{{if not .Folders}}<div class="folder-empty">no folders yet</div>{{end}}</div></div>

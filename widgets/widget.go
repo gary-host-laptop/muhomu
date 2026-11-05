@@ -10,9 +10,10 @@
 package widgets
 
 import (
-	"database/sql"
 	"html/template"
 	"math/rand"
+
+	"muhomu/internal/store"
 )
 
 // ConfigQuote carries a user-defined quote from the YAML config.
@@ -47,7 +48,7 @@ type SearchEngine struct {
 // RenderContext carries the material conditions available to each widget
 // at render time. Widgets take only what they need from this context.
 type RenderContext struct {
-	DB             *sql.DB
+	Store          *store.Store
 	RNG            *rand.Rand
 	FaviconDir     string
 	ProfileDir     string

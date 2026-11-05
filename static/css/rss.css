@@ -1,0 +1,199 @@
+/* RSS list view */
+.rss-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+}
+
+.rss-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    padding: 7px 8px;
+    color: var(--dim);
+    border-left: 2px solid transparent;
+    font-size: 13px;
+    transition:
+        color 0.1s,
+        border-color 0.1s,
+        background 0.1s;
+    text-decoration: none;
+}
+
+.rss-item:hover {
+    color: var(--white);
+    border-left-color: var(--accent);
+    background: var(--hover-subtle);
+}
+
+.rss-fav {
+    width: 16px;
+    height: 16px;
+    flex-shrink: 0;
+    margin-top: 1px;
+    opacity: 0.8;
+}
+
+.rss-item:hover .rss-fav {
+    opacity: 1;
+}
+
+.rss-item-body {
+    flex: 1;
+    min-width: 0;
+}
+
+.rss-item-title {
+    color: var(--white);
+    font-size: 13px;
+    line-height: 1.4;
+    margin-bottom: 2px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.rss-item-meta {
+    font-size: 11px;
+    color: var(--dimmer);
+    letter-spacing: 0.5px;
+}
+
+/* RSS card view */
+.rss-horizontal {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.rss-card {
+    display: flex;
+    gap: 10px;
+    padding: 8px;
+    background: var(--panel2);
+    border: 1px solid var(--border);
+    text-decoration: none;
+    color: var(--dim);
+    transition:
+        border-color 0.1s,
+        color 0.1s;
+}
+
+.rss-card:hover {
+    border-color: var(--accent3);
+    color: var(--white);
+}
+
+.rss-card-img {
+    width: 80px;
+    min-width: 80px;
+    height: 60px;
+    overflow: hidden;
+    background: var(--panel);
+    border: 1px solid var(--border-lt);
+    flex-shrink: 0;
+}
+
+.rss-card-img img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+.rss-card-body {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+
+.rss-card-title {
+    color: var(--white);
+    font-size: 13px;
+    line-height: 1.4;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+}
+
+.rss-card-meta {
+    font-size: 11px;
+    color: var(--dimmer);
+    letter-spacing: 0.5px;
+    margin-top: auto;
+}
+
+.rss-card:hover .rss-card-title {
+    color: var(--accent3);
+}
+
+.rss-page {
+    display: none;
+}
+
+.rss-page.active {
+    display: block;
+}
+
+/* RSS pager in the titlebar (moved out of the body so the body height
+   can be fixed). [data-pager] buttons carry the same caret arrows as
+   the image / quote / kotoba next buttons; the
+   [data-pager-indicator] counter is scoped from the widget root by
+   pager.js. */
+.rss-pager:disabled {
+    color: var(--dimmer);
+    opacity: 0.35;
+    cursor: default;
+}
+
+.rss-pager-ind {
+    font-family: var(--font-doto);
+    font-size: 12px;
+    color: var(--dimmer);
+    letter-spacing: 1px;
+    /* pager.js freezes the box at the widest "N / N" width so the
+       arrows don't shift when the page number changes; nowrap keeps
+       that fixed box from wrapping its text. */
+    min-width: 34px;
+    text-align: center;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.rss-body {
+    /* Fixed standard height (--widget-body-h, the bookmarks widget's
+       default 3 rows) so the widget never resizes; a page with more
+       items than fit (custom items-per-page) scrolls internally. */
+    height: var(--widget-body-h);
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: var(--dim) var(--panel);
+    padding: 6px 4px;
+}
+
+/* RSS placeholder — shown by the full-page render while no feed data is
+   cached yet; htmx swaps the real list in via hx-trigger="load". */
+.rss-loading .rss-placeholder {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    font-size: 11px;
+    color: var(--dimmer);
+    letter-spacing: 0.5px;
+}
+
+/* Refresh button — htmx adds .htmx-request to the requesting element
+   while the ?refresh=1 fetch is in flight. */
+@keyframes rss-refresh-kf {
+    from { transform: rotate(0deg); }
+    to   { transform: rotate(360deg); }
+}
+
+.rss-refresh.htmx-request i {
+    animation: rss-refresh-kf 0.9s linear infinite;
+}

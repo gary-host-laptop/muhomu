@@ -117,7 +117,7 @@ function tw(lang) {
 /**
  * Get greeting array for a given hour and language.
  */
-function getGreetingStrings(h, lang) {
+export function getGreetingStrings(h, lang) {
   const ui = t(lang);
   if (h < 5)  return ui.greeting_night;
   if (h < 12) return ui.greeting_morning;

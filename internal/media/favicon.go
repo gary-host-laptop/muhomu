@@ -1,8 +1,6 @@
-// Package widgets — shared favicon caching.
-//
-// Favicons are stored as <md5-of-source-url><detected-ext>
+// Favicon caching. Favicons are stored as <md5-of-source-url><detected-ext>
 // and served at /api/images/favicons/<filename>.
-package widgets
+package media
 
 import (
 	"bytes"

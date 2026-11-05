@@ -1,0 +1,163 @@
+/* Divider */
+.divider {
+    height: 1px;
+    background: linear-gradient(to right, var(--border-lt), transparent);
+}
+
+/* Drag and drop */
+.dragging {
+    opacity: 0.3;
+}
+body.edit-mode .quick-links a {
+    cursor: grab;
+}
+body.edit-mode .quick-links a:active {
+    cursor: grabbing;
+}
+body.edit-mode .quick-links a.drag-over {
+    border-left-color: var(--accent) !important;
+    background: var(--hover-bg);
+}
+body.edit-mode .folder-tile[data-drag-index] {
+    cursor: grab;
+}
+body.edit-mode .folder-tile[data-drag-index]:active {
+    cursor: grabbing;
+}
+body.edit-mode .folder-tile[data-drag-index].drag-over {
+    border-color: var(--accent);
+    background: var(--hover-subtle);
+}
+body.edit-mode .fav-tile:not(.folder-up) {
+    cursor: grab;
+}
+body.edit-mode .fav-tile:not(.folder-up):active {
+    cursor: grabbing;
+}
+body.edit-mode .fav-tile.drag-over {
+    border-color: var(--accent);
+    background: var(--hover-subtle);
+}
+
+/* Context menu */
+#ctx-menu {
+    position: fixed;
+    z-index: 9999;
+    background: var(--panel);
+    border: 1px solid var(--border-lt);
+    min-width: 140px;
+    display: none;
+    flex-direction: column;
+}
+
+#ctx-menu.visible {
+    display: flex;
+}
+
+.ctx-item {
+    font-family: var(--font-pixel);
+    font-size: 11px;
+    color: var(--dim);
+    padding: 8px 14px;
+    cursor: pointer;
+    letter-spacing: 0.5px;
+    border-bottom: 1px solid var(--border);
+}
+
+.ctx-item:last-child {
+    border-bottom: none;
+}
+.ctx-item:hover {
+    color: var(--white);
+    background: rgba(255, 255, 255, 0.04);
+}
+.ctx-item.danger:hover {
+    color: var(--accent2);
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+    width: 6px;
+}
+::-webkit-scrollbar-track {
+    background: var(--bg);
+}
+::-webkit-scrollbar-thumb {
+    background: var(--border-lt);
+}
+::-webkit-scrollbar-thumb:hover {
+    background: var(--dim);
+}
+
+/* Selection */
+::selection {
+    background: var(--sel-bg);
+    color: var(--white);
+}
+
+/* Footer — the page's last element in normal flow, so the page div ends
+   exactly here. The bottom breathing room lives in the footer's own
+   padding (not the page's), and the horizontal 20px matches the page so
+   the footer items line up with the columns above. */
+.page-footer {
+    border-top: 1px solid var(--border);
+    padding: 8px 20px 40px;
+    font-family: var(--font-pixel);
+    font-size: 11px;
+    color: var(--dimmer);
+    letter-spacing: 0.5px;
+    flex-shrink: 0;
+}
+
+.footer-inner {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    line-height: 1;
+    flex-wrap: wrap;
+}
+
+.fi-item {
+    white-space: nowrap;
+    flex-shrink: 0;
+    transition: color 0.15s;
+}
+
+.fi-rx { color: var(--accent); }
+.fi-tx { color: var(--accent2); }
+.fi-cpu { color: var(--dimmer); }
+.fi-ram { color: var(--dim); }
+
+.fi-sep {
+    color: var(--border);
+    flex-shrink: 0;
+    user-select: none;
+}
+
+.fi-right {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    margin-left: auto;
+    flex-shrink: 0;
+}
+
+.fi-version {
+    color: var(--border-lt);
+    flex-shrink: 0;
+    font-family: var(--font-doto);
+    letter-spacing: 1px;
+}
+
+.fi-github {
+    color: var(--dimmer);
+    font-size: 16px;
+    line-height: 1;
+    display: inline-flex;
+    align-items: center;
+    transition: color 0.15s;
+}
+
+.fi-github:hover {
+    color: var(--accent2);
+}

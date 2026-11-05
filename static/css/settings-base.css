@@ -1,0 +1,97 @@
+/* settings-base.css — the settings page. Ported from the mutabu extension's
+   settings page (same design language), adapted to muhomu's theme vars
+   and extended for the schema-driven config editor. */
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+    width: 100%;
+    min-height: 100%;
+    background: var(--bg);
+    color: var(--white);
+    font-family: var(--font-pixel);
+    font-size: 13px;
+}
+
+body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background: repeating-linear-gradient(
+        0deg,
+        transparent,
+        transparent 2px,
+        rgba(255,255,255,0.012) 2px,
+        rgba(255,255,255,0.012) 4px
+    );
+    pointer-events: none;
+    z-index: 0;
+}
+
+body.theme-light::before {
+    background: repeating-linear-gradient(
+        0deg,
+        transparent,
+        transparent 2px,
+        rgba(0,0,0,0.018) 2px,
+        rgba(0,0,0,0.018) 4px
+    );
+}
+
+a { color: var(--accent); text-decoration: none; }
+a:hover { color: var(--accent2); }
+
+/* ── LAYOUT ──────────────────────────────────────────────── */
+.page {
+    position: relative;
+    z-index: 1;
+    max-width: 1180px;
+    margin: 0 auto;
+    padding: 32px 20px 140px;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
+/* ── HEADER ──────────────────────────────────────────────── */
+.header {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 14px;
+}
+
+.header-title {
+    font-family: var(--font-doto);
+    font-size: 36px;
+    font-weight: 900;
+    color: var(--white);
+    letter-spacing: 4px;
+    line-height: 1;
+}
+
+.header-sub {
+    font-size: 10px;
+    color: var(--dimmer);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-top: 6px;
+}
+
+.back-btn {
+    background: none;
+    border: 1px solid var(--border);
+    color: var(--dim);
+    font-family: var(--font-pixel);
+    font-size: 11px;
+    padding: 6px 14px;
+    cursor: pointer;
+    letter-spacing: 1px;
+    transition: color 0.1s, border-color 0.1s;
+    text-decoration: none;
+}
+.back-btn:hover { color: var(--accent); border-color: var(--accent); }
+
+/* ── SECTIONS ──────────────────────────────────────────────
+   Flat list layout: no cards, no clip-path. Sections are just
+   headers (colored bar + label) dividing one continuous body. */

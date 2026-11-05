@@ -1,7 +1,6 @@
 package widgets
 
 import (
-	"fmt"
 	"html/template"
 	"net/url"
 	"os"
@@ -11,6 +10,12 @@ import (
 )
 
 type ImageWidget struct{}
+
+type imageView struct {
+	ImageURL string
+	Filename string
+	NextURL  string
+}
 
 var allowedImgExts = map[string]bool{
 	".jpg": true, ".jpeg": true, ".png": true,
@@ -93,28 +98,23 @@ func (w *ImageWidget) Render(ctx RenderContext) (template.HTML, error) {
 		imageURL = widgetServeURL(ctx.WidgetImageDir, filename)
 	}
 
-	inner := `<div class="widget-img-inner">
-  <div class="widget-img-wrap" id="widget-img-wrap"></div>
-</div>`
-	acts := `<button class="wt-act" id="widget-img-next" title="next image" disabled><i class="ph-light ph-caret-right"></i></button>`
-
+	view := imageView{ImageURL: imageURL, Filename: filename}
 	if imageURL != "" {
-		// width/height stay CSS-driven; lazy+async keep a big first image
-		// from blocking first paint of the tab.
-		inner = fmt.Sprintf(`<div class="widget-img-inner">
-  <div class="widget-img-wrap" id="widget-img-wrap"><img src="%s" alt="" id="widget-img" class="active" data-filename="%s" loading="lazy" decoding="async"></div>
-</div>`, htmlEscape(imageURL), filename)
 		// The next button carries the current filename so the server can
 		// step to the following image. A prefetch link warms the cache for
 		// the image after that, keeping clicks instant without client JS.
-		acts = fmt.Sprintf(
-			`<button class="wt-act" id="widget-img-next" title="next image" hx-get="/api/widget/image?current=%s" hx-target="closest .widget" hx-swap="outerHTML"><i class="ph-light ph-caret-right"></i></button>`,
-			url.QueryEscape(filename),
-		)
 		if next := widgetImageAfter(ctx.WidgetImageDir, filename); next != "" {
-			inner += fmt.Sprintf(`<link rel="prefetch" href="%s">`, htmlEscape(widgetServeURL(ctx.WidgetImageDir, next)))
+			view.NextURL = widgetServeURL(ctx.WidgetImageDir, next)
 		}
 	}
 
-	return wrap(ctx, "image", "イメージ", acts, inner), nil
+	inner, err := renderWidgetTemplate("image.tmpl", view)
+	if err != nil {
+		return "", err
+	}
+	acts, err := renderWidgetTemplate("image-actions.tmpl", view)
+	if err != nil {
+		return "", err
+	}
+	return wrap(ctx, "image", "イメージ", string(acts), string(inner)), nil
 }

@@ -1,0 +1,6 @@
+<div class="search-bar">
+    <input type="text" id="search-input" placeholder="search..." autocomplete="off" />
+</div>
+<div class="search-engines">
+    {{if not .}}<button class="engine-btn active" data-url="https://duckduckgo.com/?q=">duckduckgo</button>{{end}}{{range .}}<button class="engine-btn{{if .Default}} active{{end}}" data-url="{{.URL}}">{{.Name}}</button>{{end}}
+</div>

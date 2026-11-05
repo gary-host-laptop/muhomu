@@ -246,5 +246,3 @@ func loadConfig(path string) AppConfig {
 	log.Printf("config: loaded %s (%d columns, %d widgets)", path, len(base.Columns), total)
 	return base
 }
-
-

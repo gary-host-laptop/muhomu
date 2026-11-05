@@ -1,10 +1,8 @@
 package widgets
 
 import (
-	"fmt"
 	"html/template"
 	"math/rand"
-	"net/url"
 )
 
 type QuoteWidget struct{}
@@ -39,7 +37,7 @@ func (w *QuoteWidget) Render(ctx RenderContext) (template.HTML, error) {
 	current := ctx.Query["current"]
 
 	var q Quote
-	if quotes, err := dbQuotes(ctx.DB); err == nil && len(quotes) > 0 {
+	if quotes, err := ctx.Store.Quotes(); err == nil && len(quotes) > 0 {
 		q = pickQuote(quotes, current, ctx.RNG)
 	} else if len(ctx.ConfigQuotes) > 0 {
 		pool := make([]Quote, len(ctx.ConfigQuotes))
@@ -56,16 +54,18 @@ func (w *QuoteWidget) Render(ctx RenderContext) (template.HTML, error) {
 
 	// The next button re-renders this widget via htmx. It carries the
 	// current quote text as ?current= so the server avoids repeating it.
-	btn := fmt.Sprintf(
-		`<button class="wt-act" hx-get="/api/widget/quote?current=%s" hx-target="closest .widget" hx-swap="outerHTML" title="next quote"><i class="ph-light ph-caret-right"></i></button>`,
-		url.QueryEscape(qText),
-	)
-	inner := fmt.Sprintf(
-		`<div class="widget-body" style="padding:8px"><blockquote class="quote-block">
-  <p>%s</p>
-  <footer>%s</footer>
-</blockquote></div>`,
-		htmlEscape(qText), htmlEscape(q.Author),
-	)
-	return wrap(ctx, "quote", "名言", btn, inner), nil
+	data := struct {
+		Text   string
+		Author string
+	}{qText, q.Author}
+
+	btn, err := renderWidgetTemplate("quote-actions.tmpl", data)
+	if err != nil {
+		return "", err
+	}
+	inner, err := renderWidgetTemplate("quote.tmpl", data)
+	if err != nil {
+		return "", err
+	}
+	return wrap(ctx, "quote", "名言", string(btn), string(inner)), nil
 }

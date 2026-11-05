@@ -1,0 +1,4 @@
+<div class="stats-graph">
+<svg class="stats-canvas" viewBox="0 0 300 150" preserveAspectRatio="none" aria-hidden="true">{{range .GridLines}}<line class="stats-grid" x1="0" y1="{{.}}" x2="300" y2="{{.}}"/>{{end}}{{if .HasHistory}}<g{{if .Scroll}} class="stats-scroll"{{end}}><polygon points="{{.CPUArea}}" fill="#8ab4f8" fill-opacity="0.08"/><polyline points="{{.CPUPoints}}" fill="none" stroke="#8ab4f8" stroke-width="1.5"/><polygon points="{{.MEMArea}}" fill="#90d870" fill-opacity="0.08"/><polyline points="{{.MEMPoints}}" fill="none" stroke="#90d870" stroke-width="1.5"/></g>{{end}}</svg>
+<span class="stats-lbl cpu">CPU</span><span class="stats-val cpu">{{.CPU}}</span><span class="stats-lbl mem">MEM</span><span class="stats-val mem">{{.RAM}}</span>
+</div>

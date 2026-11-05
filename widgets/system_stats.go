@@ -11,12 +11,31 @@ type SystemStatsWidget struct{}
 
 func (w *SystemStatsWidget) ID() string { return "system-stats" }
 
-func (w *SystemStatsWidget) Render(ctx RenderContext) (template.HTML, error) {
-	body := renderStatsBody(ctx.Stats)
-	return wrap(ctx, "system-stats", "システム", "", body), nil
+type systemStatsView struct {
+	Graph template.HTML
 }
 
-// statsPollAttrs drives the htmx polling of this widget. Each poll re-fetches
+type statsGraphView struct {
+	GridLines  []string
+	HasHistory bool
+	Scroll     bool
+	CPUArea    string
+	CPUPoints  string
+	MEMArea    string
+	MEMPoints  string
+	CPU        string
+	RAM        string
+}
+
+func (w *SystemStatsWidget) Render(ctx RenderContext) (template.HTML, error) {
+	body, err := renderStatsBody(ctx.Stats)
+	if err != nil {
+		return "", err
+	}
+	return wrap(ctx, "system-stats", "システム", "", string(body)), nil
+}
+
+// The system-stats body drives htmx polling of this widget. Each poll re-fetches
 // the WHOLE widget from the fragment endpoint and swaps the widget root
 // (hx-target="closest .widget", hx-swap="outerHTML") — the full-widget swap
 // every widget uses, so chrome and content always come from a single render
@@ -24,17 +43,20 @@ func (w *SystemStatsWidget) Render(ctx RenderContext) (template.HTML, error) {
 //
 // The trigger lives on the body div rather than the root: the body is
 // re-rendered along with the widget, so each poll re-arms exactly one timer
-// and the swap removes the root the old timer belonged to.
+// and the swap removes the root the old timer belonged to. Those attributes
+// live in templates/system-stats.tmpl.
 //
-// The scroll glide in static/newtab.css runs for exactly one poll period
+// The scroll glide in static/css/stats.css runs for exactly one poll period
 // (2s), so each freshly-swapped line settles into place just as the next
 // fragment arrives — if you change this period, change the animation
 // duration to match. Re-creating the graph on every poll is what re-enters
 // the glide at translateX(0), so the full-widget swap leaves it unchanged.
-const statsPollAttrs = ` hx-get="/api/widget/system-stats" hx-trigger="every 2s" hx-target="closest .widget" hx-swap="outerHTML"`
-
-func renderStatsBody(s SystemStats) string {
-	return `<div class="widget-body" id="stats-body" style="padding:6px"` + statsPollAttrs + `>` + statsGraph(s) + `</div>`
+func renderStatsBody(s SystemStats) (template.HTML, error) {
+	graph, err := statsGraph(s)
+	if err != nil {
+		return "", err
+	}
+	return renderWidgetTemplate("system-stats.tmpl", systemStatsView{Graph: graph})
 }
 
 // ── canvas-style graph ────────────────────────────────────────
@@ -96,11 +118,15 @@ func areaPoints(points string, yOff float64) string {
 	return fmt.Sprintf("0,%.1f %s %.1f,%.1f", bottom, points, graphW+step, bottom)
 }
 
-func statsGraph(s SystemStats) string {
-	var b strings.Builder
+func statsGraph(s SystemStats) (template.HTML, error) {
+	return renderWidgetTemplate("stats-graph.tmpl", buildStatsGraphView(s))
+}
 
-	b.WriteString(`<div class="stats-graph">`)
-	b.WriteString(`<svg class="stats-canvas" viewBox="0 0 300 150" preserveAspectRatio="none" aria-hidden="true">`)
+func buildStatsGraphView(s SystemStats) statsGraphView {
+	v := statsGraphView{
+		CPU: fmt.Sprintf("%.0f%%", s.CPU),
+		RAM: fmt.Sprintf("%.0f%%", s.RAM),
+	}
 
 	// gridlines — percentage reference lines on both bands, marking
 	// 0% / 25% / 50% / 75% of each band (0% at the band's bottom edge).
@@ -115,7 +141,7 @@ func statsGraph(s SystemStats) string {
 			if y > graphH-0.5 {
 				y = graphH - 0.5
 			}
-			fmt.Fprintf(&b, `<line class="stats-grid" x1="0" y1="%.1f" x2="300" y2="%.1f"/>`, y, y)
+			v.GridLines = append(v.GridLines, fmt.Sprintf("%.1f", y))
 		}
 	}
 
@@ -124,11 +150,11 @@ func statsGraph(s SystemStats) string {
 		mem := sparkPoints(s.History, bandOff, func(p StatsPoint) float64 { return p.RAM })
 		// The lines live in a .stats-scroll group so CSS can glide the
 		// whole line left by one slot on each poll (see the keyframes in
-		// static/newtab.css) instead of the SVG teleporting to its new
+		// static/css/stats.css) instead of the SVG teleporting to its new
 		// position.
 		//
 		// The class is only applied once the ring is FULL (histN+1
-		// points, i.e. statsMax in handlers.go). The extra point renders
+		// points, i.e. statsMax in stats.go). The extra point renders
 		// at x = histN*step = graphW+step, one slot OFF-SCREEN right; the
 		// new frame at translateX(0) is then pixel-identical to the
 		// previous frame's resting position (translateX(-step)), so the
@@ -139,26 +165,13 @@ func statsGraph(s SystemStats) string {
 		// without the class the line just extends rightward each poll.
 		// Gridlines and the mid divider stay outside the group — they
 		// are a fixed reference frame.
-		gClass := ""
-		if len(s.History) > histN {
-			gClass = ` class="stats-scroll"`
-		}
-		b.WriteString(`<g` + gClass + `>`)
-		b.WriteString(`<polygon points="` + areaPoints(cpu, 0) + `" fill="#8ab4f8" fill-opacity="0.08"/>`)
-		b.WriteString(`<polyline points="` + cpu + `" fill="none" stroke="#8ab4f8" stroke-width="1.5"/>`)
-		b.WriteString(`<polygon points="` + areaPoints(mem, bandOff) + `" fill="#90d870" fill-opacity="0.08"/>`)
-		b.WriteString(`<polyline points="` + mem + `" fill="none" stroke="#90d870" stroke-width="1.5"/>`)
-		b.WriteString(`</g>`)
+		v.HasHistory = true
+		v.Scroll = len(s.History) > histN
+		v.CPUArea = areaPoints(cpu, 0)
+		v.CPUPoints = cpu
+		v.MEMArea = areaPoints(mem, bandOff)
+		v.MEMPoints = mem
 	}
 
-	b.WriteString(`</svg>`)
-
-	// corner labels (HTML so they are not distorted by the SVG stretch)
-	b.WriteString(`<span class="stats-lbl cpu">CPU</span>`)
-	b.WriteString(`<span class="stats-val cpu">` + fmt.Sprintf("%.0f%%", s.CPU) + `</span>`)
-	b.WriteString(`<span class="stats-lbl mem">MEM</span>`)
-	b.WriteString(`<span class="stats-val mem">` + fmt.Sprintf("%.0f%%", s.RAM) + `</span>`)
-	b.WriteString(`</div>`)
-
-	return b.String()
+	return v
 }

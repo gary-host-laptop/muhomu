@@ -3,11 +3,10 @@ package main
 import (
 	"encoding/json"
 	"log"
-	"math/rand"
 	"net/http"
-	"time"
 
-	"muhomu/widgets"
+	"muhomu/internal/media"
+	"muhomu/internal/store"
 )
 
 // ── widget fragment endpoints (htmx) ───────────────────────────
@@ -22,162 +21,6 @@ import (
 //
 // Both return exactly the HTML a full page render would produce, so the
 // Go widget renderer is the single source of truth for widget markup.
-
-// allWidgetConfigs flattens the configured header and columns into a
-// widget list.
-func allWidgetConfigs() []WidgetConfig {
-	cfg := getConfig()
-	var out []WidgetConfig
-	out = append(out, cfg.Header...)
-	for _, col := range cfg.Columns {
-		out = append(out, col.Widgets...)
-	}
-	return out
-}
-
-// flattenWidgetConfigs expands split-column children into plain
-// WidgetConfigs (same child-shape parsing as widgetConfigFor),
-// recursing so nested splits are handled too.
-func flattenWidgetConfigs(cfgs []WidgetConfig) []WidgetConfig {
-	var out []WidgetConfig
-	for _, w := range cfgs {
-		if w.ID != "split-column" {
-			out = append(out, w)
-			continue
-		}
-		rawChildren, ok := w.Options["widgets"].([]interface{})
-		if !ok {
-			continue
-		}
-		var childConfigs []WidgetConfig
-		for _, raw := range rawChildren {
-			m, ok := raw.(map[string]interface{})
-			if !ok {
-				continue
-			}
-			cid, _ := m["id"].(string)
-			if cid == "" {
-				cid, _ = m["type"].(string)
-			}
-			if cid == "" {
-				continue
-			}
-			opts, _ := m["options"].(map[string]interface{})
-			if opts == nil {
-				opts = make(map[string]interface{})
-			}
-			for k, v := range m {
-				if k != "id" && k != "type" && k != "options" {
-					opts[k] = v
-				}
-			}
-			childConfigs = append(childConfigs, WidgetConfig{ID: cid, Options: opts})
-		}
-		out = append(out, flattenWidgetConfigs(childConfigs)...)
-	}
-	return out
-}
-
-// widgetConfigFor returns the first WidgetConfig matching id, recursing
-// into split-column children as well.
-func widgetConfigFor(id string) (WidgetConfig, bool) {
-	var find func(cfgs []WidgetConfig) (WidgetConfig, bool)
-	find = func(cfgs []WidgetConfig) (WidgetConfig, bool) {
-		for _, w := range cfgs {
-			if w.ID == id {
-				return w, true
-			}
-			if w.ID == "split-column" {
-				if rawChildren, ok := w.Options["widgets"].([]interface{}); ok {
-					var childConfigs []WidgetConfig
-					for _, raw := range rawChildren {
-						m, ok := raw.(map[string]interface{})
-						if !ok {
-							continue
-						}
-						cid, _ := m["id"].(string)
-						if cid == "" {
-							cid, _ = m["type"].(string)
-						}
-						if cid == "" {
-							continue
-						}
-						opts, _ := m["options"].(map[string]interface{})
-						if opts == nil {
-							opts = make(map[string]interface{})
-						}
-						for k, v := range m {
-							if k != "id" && k != "type" && k != "options" {
-								opts[k] = v
-							}
-						}
-						childConfigs = append(childConfigs, WidgetConfig{ID: cid, Options: opts})
-					}
-					if found, ok := find(childConfigs); ok {
-						return found, true
-					}
-				}
-			}
-		}
-		return WidgetConfig{}, false
-	}
-	return find(allWidgetConfigs())
-}
-
-// widgetRenderContext builds the RenderContext used both by serveIndex
-// and by the widget fragment endpoints. rng may be nil to allocate a
-// fresh one.
-func widgetRenderContext(rng *rand.Rand, opts map[string]interface{}) widgets.RenderContext {
-	cfg := getConfig()
-	if rng == nil {
-		rng = rand.New(rand.NewSource(time.Now().UnixNano()))
-	}
-	configQuotes := make([]widgets.ConfigQuote, len(quotes))
-	for i, q := range quotes {
-		configQuotes[i] = widgets.ConfigQuote{Text: q.Text, Author: q.Author}
-	}
-	searchEngines := make([]widgets.SearchEngine, len(cfg.SearchEngines))
-	for i, e := range cfg.SearchEngines {
-		searchEngines[i] = widgets.SearchEngine{Name: e.Name, URL: e.URL, Default: e.Default}
-	}
-	return widgets.RenderContext{
-		DB:              db,
-		RNG:             rng,
-		FaviconDir:      appCfg.faviconDir,
-		ProfileDir:      appCfg.profileDir,
-		BGDir:           appCfg.bgDir,
-		WidgetImageDir:  appCfg.widgetImagesDir,
-		JLPTLevel:       cfg.JLPTLevel,
-		TitleLang:       cfg.TitleLang,
-		LocationCity:    cfg.Location.City,
-		LocationLat:     cfg.Location.Lat,
-		LocationLon:     cfg.Location.Lon,
-		DefaultLED:      cfg.DefaultLED,
-		ConfigQuotes:    configQuotes,
-		Username:        cfg.Username,
-		SearchEngines:   searchEngines,
-		Options:         opts,
-		Stats:           currentSystemStats(),
-	}
-}
-
-// writeWidget renders and writes a single widget's HTML.
-func writeWidget(w http.ResponseWriter, id string, ctx widgets.RenderContext) {
-	widget, ok := widgets.Registry()[id]
-	if !ok {
-		jsonErr(w, "unknown widget", 404)
-		return
-	}
-	html, err := widget.Render(ctx)
-	if err != nil {
-		log.Printf("widget %q render error: %v", id, err)
-		jsonErr(w, "render error", 500)
-		return
-	}
-	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	w.Header().Set("Cache-Control", "no-store")
-	w.Write([]byte(html))
-}
 
 // handleWidgetGet renders one widget from server state, honoring the
 // query params a widget needs (e.g. ?current= for quote/image).
@@ -215,7 +58,7 @@ func handleWidgetPost(w http.ResponseWriter, r *http.Request) {
 		// notes is the one widget where an empty state is legitimate
 		// (clearing the note). The client uses hx-swap="none", so no
 		// re-render is needed — 204 is enough.
-		if err := setNotes(state); err != nil {
+		if err := dataStore.SetNotes(state); err != nil {
 			log.Printf("handleWidgetPost: setNotes: %v", err)
 			jsonErr(w, "save failed", 500)
 			return
@@ -229,24 +72,24 @@ func handleWidgetPost(w http.ResponseWriter, r *http.Request) {
 			jsonErr(w, "missing state", 400)
 			return
 		}
-		var folders []BookmarkFolder
+		var folders []store.BookmarkFolder
 		if err := json.Unmarshal([]byte(state), &folders); err != nil {
 			jsonErr(w, "invalid state", 400)
 			return
 		}
 		// Persist immediately so the re-render below is consistent, then
 		// upgrade favicons to locally cached copies in the background.
-		if err := setBookmarks(folders); err != nil {
+		if err := dataStore.SetBookmarks(folders); err != nil {
 			log.Printf("handleWidgetPost: setBookmarks: %v", err)
 			jsonErr(w, "save failed", 500)
 			return
 		}
-		go func(f []BookmarkFolder) {
+		go func(f []store.BookmarkFolder) {
 			dir := appCfg.faviconDir
 			changed := false
 			for fi := range f {
 				for li := range f[fi].Links {
-					local := cacheFaviconForLink(f[fi].Links[li].Label, f[fi].Links[li].URL, f[fi].Links[li].Fav, dir)
+					local := media.CacheFaviconForLink(f[fi].Links[li].Label, f[fi].Links[li].URL, f[fi].Links[li].Fav, dir)
 					if local != f[fi].Links[li].Fav {
 						f[fi].Links[li].Fav = local
 						changed = true
@@ -254,7 +97,7 @@ func handleWidgetPost(w http.ResponseWriter, r *http.Request) {
 				}
 			}
 			if changed {
-				if err := setBookmarks(f); err != nil {
+				if err := dataStore.SetBookmarks(f); err != nil {
 					log.Printf("handleWidgetPost: favicon re-save: %v", err)
 				} else {
 					invalidateCache()
@@ -267,28 +110,28 @@ func handleWidgetPost(w http.ResponseWriter, r *http.Request) {
 			jsonErr(w, "missing state", 400)
 			return
 		}
-		var items []QuickItem
+		var items []store.QuickItem
 		if err := json.Unmarshal([]byte(state), &items); err != nil {
 			jsonErr(w, "invalid state", 400)
 			return
 		}
-		if err := setQuickAccess(items); err != nil {
+		if err := dataStore.SetQuickAccess(items); err != nil {
 			log.Printf("handleWidgetPost: setQuickAccess: %v", err)
 			jsonErr(w, "save failed", 500)
 			return
 		}
-		go func(it []QuickItem) {
+		go func(it []store.QuickItem) {
 			dir := appCfg.faviconDir
 			changed := false
 			for i := range it {
-				local := cacheFaviconForLink(it[i].Label, it[i].URL, it[i].Favicon, dir)
+				local := media.CacheFaviconForLink(it[i].Label, it[i].URL, it[i].Favicon, dir)
 				if local != it[i].Favicon {
 					it[i].Favicon = local
 					changed = true
 				}
 			}
 			if changed {
-				if err := setQuickAccess(it); err != nil {
+				if err := dataStore.SetQuickAccess(it); err != nil {
 					log.Printf("handleWidgetPost: favicon re-save: %v", err)
 				} else {
 					invalidateCache()
@@ -301,12 +144,12 @@ func handleWidgetPost(w http.ResponseWriter, r *http.Request) {
 			jsonErr(w, "missing state", 400)
 			return
 		}
-		var items []RecentItem
+		var items []store.RecentItem
 		if err := json.Unmarshal([]byte(state), &items); err != nil {
 			jsonErr(w, "invalid state", 400)
 			return
 		}
-		if err := setRecent(items); err != nil {
+		if err := dataStore.SetRecent(items); err != nil {
 			log.Printf("handleWidgetPost: setRecent: %v", err)
 			jsonErr(w, "save failed", 500)
 			return

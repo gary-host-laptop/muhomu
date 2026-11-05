@@ -1,0 +1,7 @@
+<div class="widget-body"><div class="weather-block">
+  <div class="weather-temp">{{.Temp}}</div>
+  <div class="weather-condition">{{.Condition}}</div>
+  <div class="weather-feels">feels like {{.FeelsLike}}</div>
+{{if and .High .Low}}  <div class="weather-hilo">H {{.High}} · L {{.Low}}</div>
+{{end}}{{if .City}}  <div class="weather-city">{{.City}}</div>
+{{end}}</div></div>

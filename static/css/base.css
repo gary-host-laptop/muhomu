@@ -1,0 +1,107 @@
+/* ── @font-face declarations ─────────────────────────────── */
+/* font-display: swap renders text in the fallback font immediately and
+   swaps once webfonts arrive, so slow or large fonts never stall paint. */
+
+@font-face {
+    font-family: "DotGothic16";
+    src: url("/static/assets/fonts/DotGothic16-Regular.ttf") format("truetype");
+    font-display: swap;
+}
+
+@font-face {
+    font-family: "Orbitron";
+    src: url("/static/assets/fonts/Orbitron-VariableFont_wght.ttf") format("truetype");
+    font-display: swap;
+}
+
+@font-face {
+    font-family: "Inter";
+    src: url("/static/assets/fonts/Inter-VariableFont_opsz,wght.ttf")
+        format("truetype-variations");
+    font-weight: 100 900;
+    font-display: swap;
+}
+
+/* Reset / Base */
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+html,
+body {
+    width: 100%;
+    min-height: 100%;
+    background: var(--bg);
+    color: var(--white);
+    font-family: var(--font-pixel);
+    font-size: 14px;
+    overflow-x: hidden;
+}
+
+/* Background layers */
+#bg {
+    position: fixed;
+    inset: -20px;
+    z-index: 1;
+    overflow: hidden;
+    pointer-events: none;
+}
+
+#bg img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center;
+    display: block;
+}
+
+#bg.blurred img {
+    filter: blur(4px);
+}
+
+#crt {
+    position: fixed;
+    inset: 0;
+    background: repeating-linear-gradient(
+        0deg,
+        transparent,
+        transparent 2px,
+        rgba(255, 255, 255, 0.012) 2px,
+        rgba(255, 255, 255, 0.012) 4px
+    );
+    pointer-events: none;
+    z-index: 2;
+}
+
+a {
+    color: var(--accent);
+    text-decoration: none;
+}
+a:hover {
+    color: var(--accent2);
+}
+
+/* The page is a flex column, not a grid: the number of children is
+   conditional (the search strip only renders when search isn't placed in
+   the header or a column), and flex gaps only apply between *existing*
+   items — no phantom rows. The grid (main content) is the one flexible
+   row: it stretches to fill leftover space so the footer always sits at
+   the bottom of the viewport on short pages, and it never shrinks below
+   its content on tall ones. The footer is the last child in normal flow,
+   so the page div always ends exactly at the footer's bottom edge — no
+   dead scrollable space below it. */
+.page {
+    position: relative;
+    z-index: 3;
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 24px 20px 0;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}

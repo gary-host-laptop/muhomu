@@ -1,0 +1,11 @@
+<div class="widget-body" style="--bm-rows:{{.Rows}}"><div class="folder-links grid" id="folder-list" data-folder="{{.FolderIdx}}">
+<div class="folder-up fav-tile" tabindex="0" role="button" title="up one level"
+  hx-get="/api/widget/bookmarks" hx-target="closest .widget" hx-swap="outerHTML">
+  <i class="ph-light ph-folder" aria-hidden="true"></i>
+  <span>..</span>
+</div>{{if not .Links}}<div class="folder-empty">empty folder</div>{{else}}{{range .Links}}<a href="{{.URL}}" class="fav-tile" title="{{.Label}}" draggable="true" data-drag-index="{{.Index}}">
+{{if .Favicon}}  <img class="fav" src="{{.Favicon}}" alt="" width="32" height="32">
+{{else}}  <span class="fav-letter">{{.Letter}}</span>
+{{end}}  <span>{{.Label}}</span>
+  <button class="tile-edit"><i class="ph-light ph-pencil-simple"></i></button>
+</a>{{end}}{{end}}</div></div>

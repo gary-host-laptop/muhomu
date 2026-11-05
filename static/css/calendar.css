@@ -1,0 +1,129 @@
+/* Calendar */
+#calendarTable {
+    border-collapse: collapse;
+    font: inherit;
+    color: inherit;
+    background: transparent;
+    table-layout: fixed;
+    width: 90%;
+    margin: 0 auto;
+}
+
+#calendarTable td {
+    padding: 0 0.5em;
+    text-align: center;
+    vertical-align: middle;
+    white-space: nowrap;
+    height: 1.1em;
+}
+
+.cal-header-year {
+    padding: 0.1em 0.4em;
+    font-family: var(--font-doto), monospace;
+    /* Orbitron (--font-doto) is the same face the day numbers use, and it is
+       ~16% wider than Inter. Left-aligned text dumps ALL of its overflow on
+       the right, so the size is capped by the ~21px of slack between the
+       month cell and the widget's clipped edge: 18px puts "september" at
+       ~109px, which clears it. 20px (~121px) would have its tail cut off. */
+    font-size: 18px;
+    font-weight: 700;
+    letter-spacing: 0;
+    color: var(--accent);
+    text-transform: lowercase;
+    /* Continues the mid-table divider up past the day rows so the column
+       rule runs the full height of the table. See .col-right-num. */
+    border-left: 1px solid var(--border);
+    border-bottom: none;
+}
+
+/* The id is needed for specificity: `#calendarTable td` centres every cell,
+   and a bare class selector loses to it. Left-aligned so the name starts at
+   the mid-table divider instead of floating over the right strip. */
+#calendarTable td.cal-header-year {
+    text-align: left;
+}
+
+.cal-year {
+    text-align: center;
+    padding: 0.1em 0.4em;
+    font-family: var(--font-doto), monospace;
+    /* Mirrors the month name's two-row block, but in the dim tone so the
+       current month stays the accent on the card. Same face and size as
+       the month; the four digits are far narrower than a month name, so
+       this cell has room to spare. */
+    font-size: 18px;
+    font-weight: 700;
+    letter-spacing: 0;
+    color: var(--dim);
+    /* Separates the year from the last day row, mirroring the underline
+       under the month name at the top of the table. The cell spans cols
+       1-2, so the rule covers the left strip only. */
+    border-top: 1px solid var(--border);
+}
+
+.col-left-num {
+    text-align: right;
+    min-width: 2.8em;
+    border-right: 1px solid var(--border);
+    font-family: var(--font-doto), monospace;
+    font-weight: 700;
+    font-size: 12px;
+    letter-spacing: 0.5px;
+}
+.col-left-wk {
+    text-align: left;
+    min-width: 1.8em;
+    font-family: var(--font-pixel);
+    font-size: 10px;
+    color: var(--dim);
+    text-transform: lowercase;
+}
+.col-right-num {
+    text-align: right;
+    min-width: 2.8em;
+    /* Divider between the left strip's weekday initial (col 2) and the
+       right strip's day number (col 3). Empty right cells keep the class,
+       so the rule also runs through the blank rows under short months. */
+    border-left: 1px solid var(--border);
+    border-right: 1px solid var(--border);
+    font-family: var(--font-doto), monospace;
+    font-weight: 700;
+    font-size: 12px;
+    letter-spacing: 0.5px;
+}
+.col-right-wk {
+    text-align: left;
+    min-width: 1.8em;
+    font-family: var(--font-pixel);
+    font-size: 10px;
+    color: var(--dim);
+    text-transform: lowercase;
+}
+
+td.today {
+    /* Today is marked by colour and glow alone — the bar that used to sit
+       under the number read as a border on the one cell that has none. */
+    color: var(--accent);
+    text-shadow: var(--glow);
+    transition:
+        text-shadow 0.2s,
+        color 0.2s;
+}
+
+td.today:hover {
+    color: var(--accent);
+    text-shadow: var(--glow-strong);
+}
+
+.cal-header-today {
+    color: var(--accent);
+    text-shadow: var(--glow-dim);
+    /* No letter-spacing here: it was overriding .cal-header-year's 0 and
+       adding 8px to the longest month name. */
+    transition: text-shadow 0.3s;
+}
+
+.cal-header-today:hover {
+    text-shadow: var(--glow-bright);
+    letter-spacing: 2px;
+}

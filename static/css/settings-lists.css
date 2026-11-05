@@ -1,0 +1,238 @@
+/* ── LIST ROWS (engines, quotes, footer items) ── */
+.list-editor { display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px; }
+
+.list-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 10px;
+    background: var(--panel2);
+    border: 1px solid var(--border);
+}
+
+.list-row.is-active { border-color: var(--accent); }
+
+.list-row .row-main {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.list-row .row-title {
+    font-size: 11px;
+    color: var(--white);
+    letter-spacing: 1px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.list-row .row-sub {
+    font-size: 10px;
+    color: var(--dimmer);
+    letter-spacing: 0.5px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.list-row .row-badge {
+    font-size: 9px;
+    color: var(--accent);
+    border: 1px solid var(--accent);
+    padding: 1px 6px;
+    letter-spacing: 1px;
+    flex-shrink: 0;
+}
+
+.row-actions {
+    display: flex;
+    gap: 4px;
+    flex-shrink: 0;
+    /* Pin the [×] button to the right edge of the row regardless of the
+       widget/column name's width — flex justify-content: space-between
+       would need a middle filler, margin-left: auto absorbs all the free
+       space in one go. */
+    margin-left: auto;
+}
+
+.add-form {
+    display: none;
+    flex-direction: column;
+    gap: 8px;
+    padding: 12px;
+    border: 1px solid var(--border);
+    background: var(--panel2);
+    margin-bottom: 12px;
+}
+.add-form.visible { display: flex; }
+
+/* ── LAYOUT EDITOR ─────────────────────────────────────────
+   The columns render side by side exactly like the page: small =
+   250px fixed, full = remaining width. Widgets stack inside them.
+   Dragging moves the item through the DOM to the slot under the
+   cursor, so it visibly occupies the place it would take on the
+   page. */
+.layout-grid {
+    display: grid;
+    gap: 12px;
+    align-items: start;
+    min-width: 0;
+    overflow-x: auto;
+    padding-bottom: 4px;
+}
+
+.layout-col {
+    border: 1px solid var(--border);
+    background: var(--panel2);
+    min-width: 0;
+}
+
+.layout-col-widgets {
+    padding: 6px 0;
+}
+
+/* header strip — mirrors the page's one-row header */
+.layout-header-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: stretch;
+    margin-bottom: 4px;
+}
+
+.header-chip {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 10px;
+    background: var(--panel2);
+    border: 1px solid var(--border);
+    cursor: grab;
+}
+
+/* widget options toggle in the widgets section rows */
+.list-row .w-opts-btn {
+    flex-shrink: 0;
+    background: none;
+    border: 1px solid var(--border);
+    color: var(--dim);
+    font-family: var(--font-pixel);
+    font-size: 10px;
+    letter-spacing: 1px;
+    padding: 4px 10px;
+    cursor: pointer;
+    transition: color 0.1s, border-color 0.1s;
+}
+.list-row .w-opts-btn:hover {
+    color: var(--accent);
+    border-color: var(--accent);
+}
+
+.layout-col-head {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 10px;
+    border-bottom: 1px solid var(--border);
+    background: var(--titlebar);
+}
+
+.layout-col-head .col-label {
+    font-size: 10px;
+    color: var(--dimmer);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    flex: 1;
+}
+
+.layout-col-head .form-select { width: auto; }
+
+.widget-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 8px;
+    border-bottom: 1px solid var(--border);
+}
+
+.widget-row:last-child { border-bottom: none; }
+
+.widget-row .w-id {
+    font-size: 11px;
+    color: var(--white);
+    letter-spacing: 1px;
+    min-width: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.widget-row .w-opts-btn {
+    flex: 1;
+    text-align: left;
+    background: none;
+    border: none;
+    color: var(--dimmer);
+    font-family: var(--font-pixel);
+    font-size: 10px;
+    letter-spacing: 0.5px;
+    cursor: pointer;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    padding: 0;
+}
+
+.widget-row .w-opts-btn:hover { color: var(--accent); }
+
+.widget-options {
+    display: none;
+    padding: 10px 12px;
+    border-top: 1px solid var(--border);
+    background: var(--panel);
+}
+
+.widget-options.visible { display: block; }
+
+.widget-options .form-row label { width: 120px; }
+
+.widget-options .opt-inline {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.split-children {
+    margin: 6px 0 0 16px;
+    padding-left: 12px;
+    border-left: 1px solid var(--border);
+}
+/* ── DRAG AND DROP (layout editor) ──────────────────────── */
+.drag-grip {
+    color: var(--dimmer);
+    font-size: 12px;
+    line-height: 1;
+    flex-shrink: 0;
+    cursor: grab;
+    user-select: none;
+}
+
+/* [+] chip at the end of the header strip — opens the picker */
+.header-add-btn {
+    background: none;
+    border: 1px dashed var(--border);
+    color: var(--dim);
+    font-family: var(--font-pixel);
+    font-size: 14px;
+    line-height: 1;
+    padding: 8px 12px;
+    cursor: pointer;
+    transition: color 0.1s, border-color 0.1s;
+}
+.header-add-btn:hover {
+    color: var(--accent);
+    border-color: var(--accent);
+}

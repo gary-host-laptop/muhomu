@@ -1,4 +1,4 @@
-package main
+package media
 
 import (
 	"image"
@@ -22,22 +22,23 @@ const (
 	thumbQuality = 85  // JPEG quality
 )
 
-// ensureWidgetThumbs regenerates thumbnails for every widget image whose
+// EnsureThumbnails regenerates thumbnails for every widget image whose
 // thumbnail is missing or older than the original. Decodes (and skips)
-// unsupported formats gracefully — the widget falls back to the
-// original file for anything that has no thumbnail.
-func ensureWidgetThumbs(dir string) {
+// unsupported formats gracefully — the widget falls back to the original
+// file for anything that has no thumbnail.
+func EnsureThumbnails(dir string) {
 	thumbsDir := filepath.Join(dir, "thumbs")
 	if err := os.MkdirAll(thumbsDir, 0755); err != nil {
 		log.Printf("thumbnail: cannot create %s: %v", thumbsDir, err)
 		return
 	}
-	for _, name := range listImagesDir(dir) {
-		ensureWidgetThumb(dir, thumbsDir, name)
+	for _, name := range ListImages(dir) {
+		EnsureThumb(dir, thumbsDir, name)
 	}
 }
 
-func ensureWidgetThumb(dir, thumbsDir, name string) {
+// EnsureThumb generates one thumbnail if it is missing or stale.
+func EnsureThumb(dir, thumbsDir, name string) {
 	origPath := filepath.Join(dir, name)
 	thumbPath := filepath.Join(thumbsDir, name+".thumb.jpg")
 
@@ -75,7 +76,17 @@ func ensureWidgetThumb(dir, thumbsDir, name string) {
 	}
 }
 
-// scaleImage shrinks src to fit within thumbMaxDim on its longest side,
+// UpdateThumb keeps a widget thumbnail in sync after an upload/delete.
+func UpdateThumb(dir, thumbsDir, name string, remove bool) {
+	os.MkdirAll(thumbsDir, 0755)
+	if remove {
+		os.Remove(filepath.Join(thumbsDir, name+".thumb.jpg"))
+		return
+	}
+	EnsureThumb(dir, thumbsDir, name)
+}
+
+// scaleImage shrinks src to fit within maxDim on its longest side,
 // preserving aspect ratio, using bilinear interpolation.
 func scaleImage(src image.Image, maxDim int) *image.RGBA {
 	b := src.Bounds()

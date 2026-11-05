@@ -1,0 +1,3 @@
+<div class="widget-img-inner">
+  <div class="widget-img-wrap" id="widget-img-wrap">{{if .ImageURL}}<img src="{{.ImageURL}}" alt="" id="widget-img" class="active" data-filename="{{.Filename}}" loading="lazy" decoding="async">{{end}}</div>
+</div>{{if .NextURL}}<link rel="prefetch" href="{{.NextURL}}">{{end}}

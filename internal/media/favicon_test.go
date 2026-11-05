@@ -1,4 +1,4 @@
-package widgets
+package media
 
 import (
 	"crypto/md5"

@@ -1,0 +1,10 @@
+<div class="widget-body"><div class="recent-grid" id="recent-grid">{{range .}}<div class="recent-tile">
+  <div class="rt-name">{{.Name}}</div>
+  <div class="rt-url">{{.URL}}</div>
+  <button class="recent-x"><i class="ph-light ph-x"></i></button>
+</div>{{end}}</div>
+<div class="recent-quick-add">
+  <input type="text" id="rqa-name" placeholder="label" autocomplete="off" />
+  <input type="text" id="rqa-url" placeholder="https://..." autocomplete="off" />
+  <button id="rqa-btn"><span>+</span></button>
+</div></div>

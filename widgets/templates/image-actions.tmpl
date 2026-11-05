@@ -1,0 +1,1 @@
+<button class="wt-act" id="widget-img-next" title="next image"{{if .Filename}} hx-get="/api/widget/image?current={{urlquery .Filename}}" hx-target="closest .widget" hx-swap="outerHTML"{{else}} disabled{{end}}><i class="ph-light ph-caret-right"></i></button>

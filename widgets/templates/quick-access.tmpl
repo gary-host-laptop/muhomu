@@ -1,0 +1,7 @@
+<div class="widget-body" style="padding:6px 10px"><div class="quick-links">{{range .}}<a href="{{.URL}}" draggable="true" data-drag-index="{{.Index}}">
+{{if .UseLetter}}  <span class="ql-fav-letter">{{.Letter}}</span>
+  {{.Label}}
+{{else}}  <img class="ql-fav" src="{{.Favicon}}" alt="">
+  {{.Label}}
+{{end}}  <span class="qa-btn-group"><button class="qa-edit"><i class="ph-light ph-pencil-simple"></i></button></span>
+</a>{{end}}</div></div>

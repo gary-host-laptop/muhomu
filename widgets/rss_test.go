@@ -279,3 +279,36 @@ func TestFaviconSourcesPrefersDDGThenFeedLogo(t *testing.T) {
 		t.Fatalf("no sources expected for empty link/logo, got %v", srcs)
 	}
 }
+
+func TestIndexRenderHorizontalCardsPaginates(t *testing.T) {
+	seedFeed(t, "https://example.com/feed", []feedArticle{
+		{Title: "one", URL: "https://example.com/1", FeedTitle: "feed", Published: "today"},
+		{Title: "two", URL: "https://example.com/2", FeedTitle: "feed", Published: "today"},
+		{Title: "three", URL: "https://example.com/3", FeedTitle: "feed", Published: "today"},
+	}, time.Hour)
+
+	opts := feedsOption("https://example.com/feed")
+	opts["style"] = "horizontal-cards"
+	opts["items-per-page"] = float64(2)
+
+	html, err := (&RSSWidget{}).Render(RenderContext{Options: opts})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{
+		`class="rss-horizontal"`,
+		`class="rss-card"`,
+		`data-page="0" class="rss-page active"`,
+		`data-page="1" class="rss-page"`,
+		`data-pager="next"`,
+		`1 / 2`,
+		`?refresh=1`,
+	} {
+		if !strings.Contains(string(html), want) {
+			t.Fatalf("horizontal paginated render missing %q: %s", want, html)
+		}
+	}
+	if strings.Contains(string(html), `class="rss-item"`) {
+		t.Fatalf("horizontal style should not render vertical items: %s", html)
+	}
+}

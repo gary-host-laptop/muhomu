@@ -1,3 +1,5 @@
+import { getGreetingStrings } from "./i18n.js";
+
 /* ── CONTEXT MENU ───────────────────────────────────────────────
    Usage: CtxMenu.show(e, [ {label, action, danger?} ])           */
 const CtxMenu = (() => {
@@ -42,6 +44,7 @@ const CtxMenu = (() => {
 
   return { show, hide };
 })();
+window.CtxMenu = CtxMenu;
 
 /* ── MINI PROMPT ────────────────────────────────────────────────
    Lightweight inline prompt to avoid ugly browser prompt()       */
@@ -101,6 +104,7 @@ function miniPrompt(fields, prefill, opts) {
     });
   });
 }
+window.miniPrompt = miniPrompt;
 
 /* ── EDIT MODE ────────────────────────────────────────────────
    The edit-toggle lives in the identity header widget, which is
@@ -250,6 +254,8 @@ function linkPrompt(prefill) {
 }
 
 const bookmarkAddPrompt = linkPrompt;
+window.linkPrompt = linkPrompt;
+window.bookmarkAddPrompt = bookmarkAddPrompt;
 
 /* ── DRAG AND DROP SORT ─────────────────────────────────────── */
 function enableDragSort(container, itemSelector, getData, setData, reload) {
@@ -294,6 +300,7 @@ function enableDragSort(container, itemSelector, getData, setData, reload) {
     dragSrc = null;
   });
 }
+window.enableDragSort = enableDragSort;
 
 /* ── CLOCK ───────────────────────────────────────────────────── */
 function pad(n) { return String(n).padStart(2, "0"); }

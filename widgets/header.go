@@ -1,10 +1,6 @@
 package widgets
 
-import (
-	"fmt"
-	"html/template"
-	"strings"
-)
+import "html/template"
 
 // ── Header widgets ────────────────────────────────────────────
 // The header strip is configured like the body: a list of widget ids
@@ -21,19 +17,20 @@ type ClockWidget struct{}
 
 func (w *ClockWidget) ID() string { return "clock" }
 
-func clockInner() template.HTML {
-	return template.HTML(`<div class="clock-block">
-    <div id="clock">00:00:00</div>
-    <div id="date">loading...</div>
-</div>`)
+func clockInner() (template.HTML, error) {
+	return renderWidgetTemplate("clock.tmpl", nil)
 }
 
 func (w *ClockWidget) RenderHeader(ctx RenderContext) (template.HTML, error) {
-	return clockInner(), nil
+	return clockInner()
 }
 
 func (w *ClockWidget) Render(ctx RenderContext) (template.HTML, error) {
-	return wrap(ctx, "clock", "時計", "", `<div class="widget-body">`+string(clockInner())+`</div>`), nil
+	inner, err := clockInner()
+	if err != nil {
+		return "", err
+	}
+	return wrap(ctx, "clock", "時計", "", `<div class="widget-body">`+string(inner)+`</div>`), nil
 }
 
 // IdentityWidget renders the user's identity block: the edit/settings
@@ -44,30 +41,20 @@ type IdentityWidget struct{}
 
 func (w *IdentityWidget) ID() string { return "identity" }
 
-func identityInner(username string) template.HTML {
-	return template.HTML(`<div class="header-right-text">
-    <div class="header-btns">
-        <button id="edit-toggle" title="edit mode">
-            <i class="ph-light ph-pencil-simple"></i>
-        </button>
-        <a href="/settings" id="settings-btn" title="settings" aria-label="settings">
-            <i class="ph-light ph-gear-six"></i>
-        </a>
-    </div>
-    <div class="header-name-block">
-        <span id="greeting">こんにちは</span>
-        <span id="username">` + htmlEscape(username) + `</span>
-    </div>
-    <span class="header-deco">▌│█│▌│█ ▌│▌█</span>
-</div>`)
+func identityInner(username string) (template.HTML, error) {
+	return renderWidgetTemplate("identity.tmpl", username)
 }
 
 func (w *IdentityWidget) RenderHeader(ctx RenderContext) (template.HTML, error) {
-	return identityInner(ctx.Username), nil
+	return identityInner(ctx.Username)
 }
 
 func (w *IdentityWidget) Render(ctx RenderContext) (template.HTML, error) {
-	return wrap(ctx, "identity", "アイデンティティ", "", `<div class="widget-body">`+string(identityInner(ctx.Username))+`</div>`), nil
+	inner, err := identityInner(ctx.Username)
+	if err != nil {
+		return "", err
+	}
+	return wrap(ctx, "identity", "アイデンティティ", "", `<div class="widget-body">`+string(inner)+`</div>`), nil
 }
 
 // ProfileWidget renders the profile picture (avatar) with its corner
@@ -77,26 +64,20 @@ type ProfileWidget struct{}
 
 func (w *ProfileWidget) ID() string { return "profile" }
 
-func profileInner(imgURL string) template.HTML {
-	img := ""
-	if imgURL != "" {
-		img = `<img src="` + htmlEscape(imgURL) + `" alt="" style="width:100%;height:100%;object-fit:cover;">`
-	}
-	return template.HTML(`<div id="header-avatar-wrap">
-    <div id="header-avatar">` + img + `</div>
-    <span class="av-corner tl"></span>
-    <span class="av-corner tr"></span>
-    <span class="av-corner bl"></span>
-    <span class="av-corner br"></span>
-</div>`)
+func profileInner(imgURL string) (template.HTML, error) {
+	return renderWidgetTemplate("profile.tmpl", imgURL)
 }
 
 func (w *ProfileWidget) RenderHeader(ctx RenderContext) (template.HTML, error) {
-	return profileInner(ctx.ProfileImageURL), nil
+	return profileInner(ctx.ProfileImageURL)
 }
 
 func (w *ProfileWidget) Render(ctx RenderContext) (template.HTML, error) {
-	return wrap(ctx, "profile", "プロフィール", "", `<div class="widget-body">`+string(profileInner(ctx.ProfileImageURL))+`</div>`), nil
+	inner, err := profileInner(ctx.ProfileImageURL)
+	if err != nil {
+		return "", err
+	}
+	return wrap(ctx, "profile", "プロフィール", "", `<div class="widget-body">`+string(inner)+`</div>`), nil
 }
 
 // SearchWidget renders the search bar and the engine buttons. The
@@ -108,31 +89,18 @@ type SearchWidget struct{}
 
 func (w *SearchWidget) ID() string { return "search" }
 
-func searchInner(engines []SearchEngine) template.HTML {
-	var sb strings.Builder
-	if len(engines) == 0 {
-		sb.WriteString(`<button class="engine-btn active" data-url="https://duckduckgo.com/?q=">duckduckgo</button>`)
-	}
-	for _, e := range engines {
-		active := ""
-		if e.Default {
-			active = " active"
-		}
-		fmt.Fprintf(&sb, `<button class="engine-btn%s" data-url="%s">%s</button>`,
-			active, htmlEscape(e.URL), htmlEscape(e.Name))
-	}
-	return template.HTML(`<div class="search-bar">
-    <input type="text" id="search-input" placeholder="search..." autocomplete="off" />
-</div>
-<div class="search-engines">
-    ` + sb.String() + `
-</div>`)
+func searchInner(engines []SearchEngine) (template.HTML, error) {
+	return renderWidgetTemplate("search.tmpl", engines)
 }
 
 func (w *SearchWidget) RenderHeader(ctx RenderContext) (template.HTML, error) {
-	return searchInner(ctx.SearchEngines), nil
+	return searchInner(ctx.SearchEngines)
 }
 
 func (w *SearchWidget) Render(ctx RenderContext) (template.HTML, error) {
-	return wrap(ctx, "search", "検索", "", `<div class="widget-body">`+string(searchInner(ctx.SearchEngines))+`</div>`), nil
+	inner, err := searchInner(ctx.SearchEngines)
+	if err != nil {
+		return "", err
+	}
+	return wrap(ctx, "search", "検索", "", `<div class="widget-body">`+string(inner)+`</div>`), nil
 }

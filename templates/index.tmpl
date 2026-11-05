@@ -14,7 +14,15 @@
         <link rel="preload" as="font" type="font/ttf" crossorigin href="/static/assets/fonts/Orbitron-VariableFont_wght.ttf" />
         <link rel="preload" as="font" type="font/woff2" crossorigin href="/static/assets/fonts/Phosphor-Light.woff2" />
         <link rel="stylesheet" href="/static/phosphor-light.css" />
-        <link rel="stylesheet" href="/static/newtab.css" />
+        <link rel="stylesheet" href="/static/css/base.css" />
+        <link rel="stylesheet" href="/static/css/layout.css" />
+        <link rel="stylesheet" href="/static/css/bookmarks.css" />
+        <link rel="stylesheet" href="/static/css/widgets.css" />
+        <link rel="stylesheet" href="/static/css/utilities.css" />
+        <link rel="stylesheet" href="/static/css/rss.css" />
+        <link rel="stylesheet" href="/static/css/stats.css" />
+        <link rel="stylesheet" href="/static/css/calendar.css" />
+        <link rel="stylesheet" href="/static/css/split-column.css" />
         {{.ThemeCSSLinks}}
         <link rel="icon" href="/static/assets/icons/favicon.svg" type="image/svg+xml">
     </head>
@@ -65,9 +73,8 @@
         </div>
         <!-- /page -->
 
-        <script src="/static/i18n.js"></script>
         <script src="/static/js/htmx.min.js"></script>
-        <script src="/static/newtab.js"></script>
+        <script type="module" src="/static/newtab.js"></script>
         <script src="/static/js/pager.js"></script>
         {{range .ActiveWidgetIDs}}<script src="/static/js/widget-{{.}}.js"></script>
 {{end}}    </body>

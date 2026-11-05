@@ -3,16 +3,31 @@ package widgets
 
 import "strings"
 
-// stripTags removes HTML tags for plain-text display.
-// attrIf returns val when cond is true, else empty string.
-// Useful for conditionally adding HTML attributes in templates.
-func attrIf(cond bool, val string) string {
-	if cond {
-		return val
+// htmlEscape escapes the characters that are unsafe in HTML text and
+// quoted attribute values. Used by the remaining string-built widget
+// chrome and actions; template-rendered fields rely on html/template.
+func htmlEscape(s string) string {
+	result := make([]byte, 0, len(s))
+	for i := 0; i < len(s); i++ {
+		switch s[i] {
+		case '&':
+			result = append(result, '&', 'a', 'm', 'p', ';')
+		case '<':
+			result = append(result, '&', 'l', 't', ';')
+		case '>':
+			result = append(result, '&', 'g', 't', ';')
+		case '"':
+			result = append(result, '&', 'q', 'u', 'o', 't', ';')
+		case '\'':
+			result = append(result, '&', '#', '3', '9', ';')
+		default:
+			result = append(result, s[i])
+		}
 	}
-	return ""
+	return string(result)
 }
 
+// stripTags removes HTML tags for plain-text display.
 func stripTags(s string) string {
 	var buf strings.Builder
 	inTag := false

@@ -1,0 +1,490 @@
+/* Header — a configurable strip of chrome-less widgets (config
+   `header`, default: clock, identity, profile). Always one row, never
+   wraps. Widgets are fixed-size unless stated otherwise; the search
+   widget is the one exception — it stretches (flex: 1) to fill the
+   leftover horizontal space, so with the default order
+   (clock · search · identity · profile) the layout reads: clock left,
+   search filling the middle, identity + profile grouped right. */
+.header {
+    display: flex;
+    align-items: flex-end;
+    gap: 20px;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 14px;
+}
+
+/* fixed size by default — only widgets that opt in (search) stretch */
+.header-widget {
+    flex-shrink: 0;
+}
+
+/* the search bar fills the leftover horizontal space */
+.header-widget[data-widget="search"] {
+    flex: 1 1 auto;
+    min-width: 240px;
+}
+
+#header-avatar-wrap {
+    position: relative;
+    width: 90px;
+    height: 90px;
+    flex-shrink: 0;
+}
+
+#header-avatar {
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+}
+
+#header-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+.av-corner {
+    position: absolute;
+    width: 12px;
+    height: 12px;
+    z-index: 2;
+    pointer-events: none;
+}
+.av-corner.tl {
+    top: -3px;
+    left: -3px;
+    border-top: 2px solid var(--accent);
+    border-left: 2px solid var(--accent);
+}
+.av-corner.tr {
+    top: -3px;
+    right: -3px;
+    border-top: 2px solid var(--accent);
+    border-right: 2px solid var(--accent);
+}
+.av-corner.bl {
+    bottom: -3px;
+    left: -3px;
+    border-bottom: 2px solid var(--accent);
+    border-left: 2px solid var(--accent);
+}
+.av-corner.br {
+    bottom: -3px;
+    right: -3px;
+    border-bottom: 2px solid var(--accent);
+    border-right: 2px solid var(--accent);
+}
+
+
+#clock {
+    font-size: 100px;
+    font-weight: 900;
+    color: var(--white);
+    letter-spacing: 4px;
+    line-height: 1;
+    cursor: pointer;
+    user-select: none;
+    height: 52px;
+    display: flex;
+    align-items: center;
+}
+
+body.font-orbitron #clock {
+    font-family: "Orbitron", monospace;
+    font-size: 82px;
+}
+
+/* Clock color force override — when clock_theme is set to light or dark */
+body.clock-force-light #clock {
+    color: #e8e8f0;
+}
+body.clock-force-dark #clock {
+    color: #1a1a24;
+}
+
+/* Timer display overrides per clock font */
+body.font-orbitron .timer-input {
+    font-size: 15px;
+}
+body.font-orbitron .timer-sep {
+    font-size: 16px;
+}
+
+#clock.binary {
+    font-size: unset;
+    letter-spacing: unset;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 6px;
+    height: 52px;
+}
+
+.bin-group {
+    display: grid;
+    grid-template-columns: repeat(4, 16px);
+    grid-template-rows: repeat(2, 16px);
+    gap: 8px;
+}
+
+.bin-bit {
+    width: 16px;
+    height: 16px;
+    background: var(--border);
+    transform: rotate(45deg);
+    transition: background 0.15s;
+}
+
+.bin-bit.on {
+    background: var(--accent2);
+    box-shadow: 0 0 6px var(--accent2);
+}
+.bin-bit.off {
+    background: var(--border);
+}
+.bin-empty {
+    width: 16px;
+    height: 16px;
+}
+
+.bin-sep {
+    font-family: var(--font-doto);
+    font-size: 24px;
+    color: var(--dimmer);
+    line-height: 1;
+    align-self: flex-end;
+    padding-bottom: 1px;
+}
+
+#date {
+    font-family: var(--font-pixel);
+    font-size: 13px;
+    color: var(--dim);
+    margin-top: 4px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+}
+
+.header-right-text {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    justify-content: space-between;
+    height: 90px;
+    font-size: 11px;
+    color: var(--dimmer);
+    letter-spacing: 1px;
+}
+
+.header-name-block {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    font-size: 12px;
+    color: var(--accent2);
+}
+
+.header-btns {
+    display: flex;
+    gap: 4px;
+    align-items: center;
+}
+
+.header-deco {
+    font-size: 14px;
+    color: var(--white);
+    letter-spacing: 0.01em;
+}
+
+/* Header buttons */
+#edit-toggle,
+#settings-btn {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    color: var(--dimmer);
+    font-size: 16px;
+    line-height: 1;
+    width: 28px;
+    height: 28px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    padding: 0;
+    margin: 0;
+    appearance: none;
+    -webkit-appearance: none;
+    transition:
+        color 0.1s,
+        border-color 0.1s,
+        background 0.1s;
+}
+
+#edit-toggle:hover {
+    color: var(--accent2);
+    border-color: var(--accent2);
+}
+body.edit-mode #edit-toggle {
+    color: var(--accent2);
+    border-color: var(--accent2);
+    background: var(--panel2);
+}
+#settings-btn:hover {
+    color: var(--dim);
+    border-color: var(--dim);
+}
+
+/* Search */
+.search-bar {
+    position: relative;
+}
+
+.search-bar::before {
+    content: "›";
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-55%);
+    color: var(--accent);
+    font-size: 18px;
+    pointer-events: none;
+    z-index: 1;
+}
+
+.search-bar input {
+    width: 100%;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    color: var(--white);
+    font-family: var(--font-pixel);
+    font-size: 15px;
+    padding: 10px 14px 10px 30px;
+    outline: none;
+    transition:
+        border-color 0.15s,
+        background 0.15s;
+}
+
+.search-bar input:focus {
+    background: var(--panel2);
+    border-color: var(--accent);
+}
+
+.search-engines {
+    display: flex;
+    gap: 4px;
+    margin-top: 6px;
+}
+
+.engine-btn {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    color: var(--dim);
+    font-family: var(--font-pixel);
+    font-size: 12px;
+    padding: 3px 8px;
+    cursor: pointer;
+    letter-spacing: 1px;
+    transition:
+        color 0.1s,
+        border-color 0.1s;
+}
+
+.engine-btn:hover,
+.engine-btn.active {
+    color: var(--accent);
+    border-color: var(--accent);
+}
+
+.engine-btn.active {
+    background: var(--panel2);
+}
+
+/* Accent strip */
+.accent-strip {
+    display: flex;
+    height: 2px;
+    margin-bottom: -1px;
+}
+
+.accent-strip span:nth-child(1) {
+    flex: 1;
+    background: var(--red);
+}
+.accent-strip span:nth-child(2) {
+    flex: 3;
+    background: var(--accent);
+}
+.accent-strip span:nth-child(3) {
+    flex: 2;
+    background: var(--dimmer);
+}
+
+/* Grid */
+.grid {
+    display: grid;
+    grid-template-columns: var(--grid-cols, 1fr);
+    gap: 14px;
+    /* stretch: every column shares the row height, so widget groups end
+       on a common line and leftover space pools at the bottom edge. */
+    align-items: stretch;
+    width: 100%;
+    /* the one stretchable row of the page (see .page): absorbs leftover
+       viewport space so the footer pins to the bottom on short pages.
+       min-height stays auto — the grid never shrinks below its content. */
+    flex: 1 1 auto;
+}
+
+.col {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    min-width: 0;
+    overflow: visible;
+}
+
+/* Widget base
+
+   No backdrop-filter here, deliberately: the widget background is the
+   fully opaque --panel, so blurring what's behind it is never visible.
+   The filter only buys a GPU/compositing layer per widget — and
+   backdrop-filter + overflow:hidden is a known source of rendering
+   glitches (ghosted tiles, flicker, white edge artifacts) on
+   machines without GPU acceleration, and of compositing flash when htmx
+   swaps a widget. Removing it costs nothing visually and removes all of
+   that. (The bookmarks widget called this out first; it now applies
+   globally.) */
+.widget {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    position: relative;
+    overflow: hidden;
+    min-width: 0;
+    /* Standard fixed widget body height: the bookmarks widget at its
+       default 3 rows of tiles (--bm-rows: 3) and the RSS widget with
+       its default 5 items per page. Widgets that want a stable,
+       uniform height size their body from this. */
+    --widget-body-h: 254px;
+    /* Fixed body height shared by the two audio widgets (timer, rain), so
+       adding a control row to one never makes it the tallest in a split
+       row. The timer's display flexes to absorb its extra row. */
+    --audio-body-h: 136px;
+}
+
+/* Widget title bar */
+.widget-title {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    font-size: 13px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    padding: 0;
+    min-height: 36px;
+    border-bottom: 1px solid var(--border);
+    background: var(--titlebar);
+    position: relative;
+}
+
+.widget-title::after {
+    content: "";
+    position: absolute;
+    left: 20px;
+    top: 0;
+    bottom: 0;
+    right: 72px;
+    background: linear-gradient(to right, transparent 70%, var(--titlebar));
+    pointer-events: none;
+}
+
+.wt-btn,
+.wt-act {
+    background: transparent;
+    -webkit-appearance: none;
+    appearance: none;
+    border: none;
+    color: var(--dimmer);
+    font-size: 16px;
+    cursor: pointer;
+    padding: 0 9px;
+    line-height: 1;
+    position: relative;
+    z-index: 1;
+    flex-shrink: 0;
+    transition: color 0.1s;
+    display: flex;
+    align-items: center;
+}
+.wt-btn:hover,
+.wt-act:hover {
+    color: var(--white);
+}
+.wt-act.active {
+    color: var(--accent2);
+}
+#rain-btn.playing {
+    color: var(--red);
+}
+
+.wt-btn {
+    visibility: hidden;
+}
+body.edit-mode .wt-btn {
+    visibility: visible;
+}
+
+.wt-label + .wt-act,
+.wt-label + .wt-btn {
+    margin-left: auto;
+}
+
+.led {
+    width: 4px;
+    align-self: stretch;
+    flex-shrink: 0;
+    margin-right: 8px;
+    background: var(--led-color);
+    box-shadow: 0 0 6px var(--led-color);
+}
+
+.wt-label {
+    color: var(--dim);
+    font-weight: bold;
+}
+.wt-label::after {
+    content: " ›";
+    color: var(--dimmer);
+}
+
+.widget-body {
+    padding: 10px;
+}
+
+/* Image widget */
+.widget-img-inner {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 14px 12px;
+}
+
+.widget-img-wrap {
+    width: 100%;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--panel2);
+    border: 1px solid var(--border);
+}
+
+.widget-img-wrap img {
+    display: none;
+    width: 100%;
+    height: auto;
+}
+
+.widget-img-wrap img.active {
+    display: block;
+}

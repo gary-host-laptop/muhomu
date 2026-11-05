@@ -2,10 +2,18 @@
 
 muhomu is a single Go binary that serves a server-rendered dashboard. The frontend is [htmx](https://htmx.org/) plus a small amount of vanilla JS; there is no build step and no frontend framework.
 
+## Package layout
+
+- `main` (repository root) — startup/wiring (`main.go`), config (`config.go`), HTTP routes (`server.go`), page rendering (`render.go`), fragment API (`widget_api.go`), settings API (`settings.go` + `settings_images.go` / `settings_quotes.go`), background collectors (`stats.go`), and small feature files (`theme.go`, `layout.go`, `quotes.go`, `kotoba.go`, `weather.go`, `footer.go`).
+- `internal/store` — SQLite persistence boundary: schema, shared domain types, and bookmark / quick-access / recent / notes / quote operations.
+- `internal/media` — image listing and selection, thumbnail generation, favicon caching, and link/favicon helpers.
+- `widgets` — one file per widget plus shared rendering (`widget.go`, `types.go`, `util.go`, `templates.go`), embedded widget templates in `widgets/templates/`, and feed/weather fetch/render splits (`rss.go`, `rss_fetch.go`, `rss_render.go`, `weather.go`, `weather_api.go`).
+- `static` — native ES modules for the newtab page (`newtab.js`, `i18n.js`) and settings (`js/settings/main.js`), classic per-widget scripts, and split stylesheets under `css/` (page layout, widgets, feeds, calendar, and settings forms/lists).
+
 ## The shape of a request
 
-1. `serveIndex` (`main.go`) walks `columns` from `config.yaml`, renders every widget through `widgets.Registry()`, and assembles the page template.
-2. The rendered page is cached in memory for 5 seconds (`pageCache`), so a reload burst doesn't re-render everything.
+1. `serveIndex` (`render.go`) walks `columns` from `config.yaml`, renders every widget through `widgets.Registry()`, and assembles the page template.
+2. The rendered page is cached in memory for 5 seconds (`pageCache` in `cache.go`), so a reload burst doesn't re-render everything.
 3. The browser receives plain HTML. Widgets with JS load their `static/js/widget-<id>.js`; everything else is pure server rendering + htmx.
 
 ## The widget interface
@@ -22,7 +30,9 @@ type Widget interface {
 - `ID()` is the widget's `data-widget` attribute and its config key.
 - `Render()` returns the complete widget HTML (or `""` to render nothing).
 
-`RenderContext` carries everything a widget may need — the `*sql.DB`, a per-request RNG, the image/favicon directories, config values (`JLPTLevel`, location, quotes, `Options`), the latest system stats snapshot, and per-request query parameters (`Query`). Widgets take only what they need; the coordinator knows nothing about individual widgets.
+`RenderContext` carries everything a widget may need — the shared `*store.Store`, a per-request RNG, the image/favicon directories, config values (`JLPTLevel`, location, quotes, `Options`), the latest system stats snapshot, and per-request query parameters (`Query`). Widgets take only what they need; the coordinator knows nothing about individual widgets.
+
+Widget inner markup lives in `widgets/templates/*.tmpl`, embedded with `//go:embed` and executed by `renderWidgetTemplate` (`widgets/templates.go`). Shared chrome still comes from `wrap()`, and a few small titlebar action strings remain in Go.
 
 `wrap()` (in `widgets/widget.go`) produces the shared chrome every widget is wrapped in: the root `<div class="widget" data-widget="...">`, the title bar (LED, label, action buttons), and the body container. An optional JSON state blob is embedded as `data-state` on the root so client JS can read the widget's data model after server-side re-renders — the Go renderer is always the single source of truth.
 
@@ -59,13 +69,13 @@ The result: no layout flash and no icon pop-in, even on first open.
 ## Caching layers
 
 - **Page cache** — the rendered `/` page is cached for 5s in memory.
-- **Feed cache** — RSS responses are cached per-feed with a TTL (default 2h) and refreshed with conditional requests (`ETag` / `Last-Modified`). Full-page renders never fetch: they serve cached entries (stale included) or a placeholder, while a background warmer (`startRSSWarmer` in `handlers.go`) refreshes all configured feeds every minute and open tabs poll the widget fragment for updates.
+- **Feed cache** — RSS responses are cached per-feed with a TTL (default 2h) and refreshed with conditional requests (`ETag` / `Last-Modified`). Full-page renders never fetch: they serve cached entries (stale included) or a placeholder, while a background warmer (`startRSSWarmer` in `stats.go`) refreshes all configured feeds every minute and open tabs poll the widget fragment for updates.
 - **Weather cache** — cached until the start of the next hour.
 - **Favicon cache** — remote favicons are downloaded once and stored under an md5-based filename in `data/images/favicons/`, served at `/api/images/favicons/` with `Cache-Control: public, max-age=86400` (safe because a filename always maps to the same bytes). A background migration on startup upgrades any legacy remote favicon URLs to local copies.
 
 ## System stats
 
-A background goroutine (`startStatsCollector` in `handlers.go`) samples CPU, RAM, and network counters from `/proc` every 2 seconds into a ring buffer of 31 points. The system-stats widget renders them as two SVG sparklines (CPU on top, RAM below) with percentage gridlines at 0/25/50/75%. Each 2s poll swaps in a new frame; a CSS transform glide slides the newest point in from the right while the oldest exits left, so the graph reads as one continuous scroll rather than a tick.
+A background goroutine (`startStatsCollector` in `stats.go`) samples CPU, RAM, and network counters from `/proc` every 2 seconds into a ring buffer of 31 points. The system-stats widget renders them as two SVG sparklines (CPU on top, RAM below) with percentage gridlines at 0/25/50/75%. Each 2s poll swaps in a new frame; a CSS transform glide slides the newest point in from the right while the oldest exits left, so the graph reads as one continuous scroll rather than a tick.
 
 ## Settings API
 
@@ -75,7 +85,7 @@ A background goroutine (`startStatsCollector` in `handlers.go`) samples CPU, RAM
 - `POST /api/settings` merges a (partial) config JSON over the running config, validates that the result parses as YAML, writes `config.yaml` atomically (temp file + rename), and applies it immediately via `setConfig` + cache invalidation.
 - `POST /api/settings/reset`, `POST /api/settings/quotes`, and the image upload/delete endpoints cover the rest.
 
-The page itself is a schema-driven vanilla JS app (`static/settings.js`): forms are declared in a schema object, and the layout editor reuses a nested widget-list editor for the header, columns, and `split-column` children. A new config key needs only a schema entry — no server change.
+The page itself is a schema-driven native ES module (`static/js/settings/main.js`): forms are declared in a schema object, and the layout editor reuses a nested widget-list editor for the header, columns, and `split-column` children. A new config key needs only a schema entry — no server change.
 
 ## Themes
 

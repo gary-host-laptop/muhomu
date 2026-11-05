@@ -1,0 +1,115 @@
+/* ── WIDGET PICKER POPUP ───────────────────────────────────
+   Anchored under a [+] button; a plain menu, no overlay/modal.
+   Lives in document.body, so layout re-renders never kill it. */
+.widget-picker {
+    display: none;
+    position: fixed;
+    z-index: 100;
+    min-width: 180px;
+    max-height: 320px;
+    overflow-y: auto;
+    flex-direction: column;
+    padding: 4px;
+    background: var(--panel2);
+    border: 1px solid var(--border);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+}
+.widget-picker.open { display: flex; }
+
+.widget-picker .picker-item {
+    background: none;
+    border: none;
+    text-align: left;
+    color: var(--white);
+    font-family: var(--font-pixel);
+    font-size: 11px;
+    letter-spacing: 1px;
+    padding: 7px 10px;
+    cursor: pointer;
+    white-space: nowrap;
+}
+.widget-picker .picker-item:hover {
+    background: var(--panel);
+    color: var(--accent);
+}
+
+.widget-row[draggable],
+.layout-col[draggable],
+.header-chip[draggable] {
+    cursor: grab;
+}
+
+.widget-row.dragging,
+.layout-col.dragging,
+.header-chip.dragging {
+    opacity: 0.35;
+}
+
+/* ── SAVE BAR ────────────────────────────────────────────── */
+.save-bar {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 20px;
+    background: var(--panel);
+    border-top: 1px solid var(--border);
+    backdrop-filter: blur(4px);
+    max-width: 1180px;
+    margin: 0 auto;
+}
+
+.save-bar .save-status {
+    flex: 1;
+    font-size: 10px;
+    color: var(--dimmer);
+    letter-spacing: 1px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.save-bar .save-status.ok { color: var(--accent3); }
+.save-bar .save-status.err { color: var(--red); }
+
+/* ── THEME PICKER ────────────────────────────────────────── */
+.theme-picker .theme-name {
+    font-size: 10px;
+    color: var(--dimmer);
+    letter-spacing: 1px;
+    margin-top: 6px;
+    text-align: center;
+}
+
+/* ── CHECKBOX ROW (footer items) ─────────────────────────── */
+.check-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 24px;
+    margin-bottom: 8px;
+}
+
+.check-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 6px 0;
+    font-size: 11px;
+    color: var(--dim);
+    letter-spacing: 1px;
+    cursor: pointer;
+}
+
+.check-row input { accent-color: var(--accent); cursor: pointer; }
+
+/* ── SCROLLBAR ───────────────────────────────────────────── */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: var(--border-lt); }
+::-webkit-scrollbar-thumb:hover { background: var(--dim); }
+
+::selection { background: rgba(138, 180, 248, 0.25); color: var(--white); }

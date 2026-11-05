@@ -1,0 +1,90 @@
+/* System stats */
+.stats-graph {
+    position: relative;
+    width: 100%;
+    height: 150px;
+}
+
+.stats-canvas {
+    display: block;
+    width: 100%;
+    height: 150px;
+}
+
+.stats-grid {
+    stroke: var(--border);
+    stroke-width: 0.5;
+}
+
+.stats-lbl,
+.stats-val {
+    position: absolute;
+    font-family: var(--font-pixel, monospace);
+    font-size: 9px;
+    pointer-events: none;
+}
+
+.stats-lbl {
+    color: var(--dim);
+    left: 4px;
+}
+
+.stats-val {
+    color: var(--white);
+    right: 8px;
+}
+
+.stats-lbl.cpu,
+.stats-val.cpu {
+    top: 3px;
+}
+
+.stats-lbl.mem,
+.stats-val.mem {
+    top: 82px;
+}
+
+/* Stats scroll glide — each 2s htmx poll re-renders the 30-point line
+   with a new point appended. Without this the SVG teleports to its new
+   position every poll (the "tick"); the animation instead glides the
+   whole line left by one slot per poll, so the graph reads as one
+   continuous scroll.
+
+   Why it's seamless: the ring holds 31 points (statsMax in stats.go)
+   — 30 visible + 1 extra rendered one slot OFF-SCREEN right (at
+   x = 30*step = graphW+step). Each fresh frame starts at translateX(0)
+   with its visible points sitting exactly where the previous frame's
+   RESTING points were (translateX(-step)); the swap changes nothing on
+   screen, and the glide then slides the newest point in from the right
+   while the oldest exits left. No point is ever dropped at a swap, so
+   there is no snap. (The old version dropped the oldest point at each
+   swap and started the new line one slot right — that's the snap-right /
+   glide-left oscillation.)
+
+   One slot = graphW/(histN-1) = 300/29 ≈ 10.345 viewBox px (see
+   widgets/system_stats.go); px in an SVG CSS transform are user units,
+   so the shift scales with the preserveAspectRatio="none" stretch like
+   the points. The 2s duration must match the hx-trigger="every 2s" poll
+   period, and fill-mode forwards is REQUIRED — the resting state is the
+   shifted (-10.345px) position, and without forwards the group would
+   snap back to 0 after each glide. Reduced motion shows the resting
+   position statically (no glide). */
+@keyframes stats-scroll-kf {
+    from {
+        transform: translateX(0);
+    }
+    to {
+        transform: translateX(-10.345px);
+    }
+}
+
+.stats-scroll {
+    animation: stats-scroll-kf 2s linear forwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .stats-scroll {
+        animation: none;
+        transform: translateX(-10.345px);
+    }
+}

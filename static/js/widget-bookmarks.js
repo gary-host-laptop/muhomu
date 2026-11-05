@@ -38,7 +38,7 @@
   var savedScrollTop = 0;
 
   // Height is fixed per the config "rows" option (default 3): the
-  // server emits --bm-rows on the widget body (see newtab.css) and
+  // server emits --bm-rows on the widget body (see static/css/bookmarks.css) and
   // every view — root listing or folder — gets the same fixed-height
   // box, scrolling internally when content overflows. Nothing in JS
   // measures or sizes the widget.

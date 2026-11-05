@@ -11,6 +11,15 @@ import (
 // The polyline x-coordinates in these tests are derived from it.
 const testStep = graphW / float64(histN-1)
 
+func mustStatsGraph(t *testing.T, s SystemStats) string {
+	t.Helper()
+	h, err := statsGraph(s)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return string(h)
+}
+
 func TestStatsGraphFullRingRendersSlidingPoint(t *testing.T) {
 	// A full ring (31 points = 30 visible + 1 extra) must render the
 	// newest point one slot OFF-SCREEN right (x = 30*step ≈ 310.3). The
@@ -24,7 +33,7 @@ func TestStatsGraphFullRingRendersSlidingPoint(t *testing.T) {
 		hist[i] = StatsPoint{CPU: 50, RAM: 40}
 	}
 	s := SystemStats{CPU: 50, RAM: 40, History: hist}
-	html := string(statsGraph(s))
+	html := mustStatsGraph(t, s)
 
 	// class must be applied when the ring is full
 	if !strings.Contains(html, `<g class="stats-scroll">`) {
@@ -60,7 +69,7 @@ func TestStatsGraphWarmupHasNoGlideClass(t *testing.T) {
 		hist[i] = StatsPoint{CPU: 10, RAM: 20}
 	}
 	s := SystemStats{CPU: 10, RAM: 20, History: hist}
-	html := string(statsGraph(s))
+	html := mustStatsGraph(t, s)
 
 	if strings.Contains(html, "stats-scroll") {
 		t.Fatalf("warmup render must not carry the stats-scroll class:\n%s", html)
@@ -72,7 +81,7 @@ func TestStatsGraphStaticElementsOutsideGroup(t *testing.T) {
 	for i := range hist {
 		hist[i] = StatsPoint{CPU: 50, RAM: 40}
 	}
-	html := string(statsGraph(SystemStats{CPU: 50, RAM: 40, History: hist}))
+	html := mustStatsGraph(t, SystemStats{CPU: 50, RAM: 40, History: hist})
 
 	g := strings.Index(html, `<g class="stats-scroll">`)
 	if g == -1 {
@@ -91,7 +100,7 @@ func TestStatsGraphGridlinePercentages(t *testing.T) {
 	// — a fried machine — so the top band has no edge line). The bottom
 	// band's 0% line is inset half a stroke (y=graphH-0.5) so it is not
 	// clipped thin at the viewBox edge.
-	html := string(statsGraph(SystemStats{}))
+	html := mustStatsGraph(t, SystemStats{})
 	re := regexp.MustCompile(`<line class="stats-grid" x1="0" y1="([0-9.]+)"`)
 	matches := re.FindAllStringSubmatch(html, -1)
 	if len(matches) != 8 {
@@ -106,6 +115,26 @@ func TestStatsGraphGridlinePercentages(t *testing.T) {
 	for i, w := range want {
 		if got[i] != w {
 			t.Errorf("gridline %d: want y=%s, got y=%s", i, w, got[i])
+		}
+	}
+}
+
+func TestStatsBodyIncludesPollingAttrs(t *testing.T) {
+	hist := []StatsPoint{{CPU: 12, RAM: 34}, {CPU: 15, RAM: 36}}
+	body, err := renderStatsBody(SystemStats{CPU: 12, RAM: 34, History: hist})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{
+		`id="stats-body"`,
+		`hx-get="/api/widget/system-stats"`,
+		`hx-trigger="every 2s"`,
+		`<svg class="stats-canvas"`,
+		`<span class="stats-val cpu">12%</span>`,
+		`<span class="stats-val mem">34%</span>`,
+	} {
+		if !strings.Contains(string(body), want) {
+			t.Fatalf("stats body missing %q: %s", want, body)
 		}
 	}
 }

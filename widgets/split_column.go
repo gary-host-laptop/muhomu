@@ -1,9 +1,6 @@
 package widgets
 
-import (
-	"html/template"
-	"strings"
-)
+import "html/template"
 
 type SplitColumnWidget struct{}
 
@@ -77,10 +74,8 @@ func (w *SplitColumnWidget) Render(ctx RenderContext) (template.HTML, error) {
 	}
 
 	// ── Render each column ──
-	var sb strings.Builder
-	sb.WriteString(`<div class="split-column">`)
-	for _, col := range cols {
-		sb.WriteString(`<div class="split-col">`)
+	rendered := make([][]template.HTML, len(cols))
+	for ci, col := range cols {
 		for _, child := range col {
 			widget, ok := Registry()[child.ID]
 			if !ok {
@@ -92,11 +87,9 @@ func (w *SplitColumnWidget) Render(ctx RenderContext) (template.HTML, error) {
 			if err != nil {
 				continue
 			}
-			sb.WriteString(string(html))
+			rendered[ci] = append(rendered[ci], html)
 		}
-		sb.WriteString(`</div>`)
 	}
-	sb.WriteString(`</div>`)
 
-	return template.HTML(sb.String()), nil
+	return renderWidgetTemplate("split-column.tmpl", struct{ Columns [][]template.HTML }{rendered})
 }

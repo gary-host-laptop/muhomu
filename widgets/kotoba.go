@@ -1,9 +1,14 @@
 package widgets
 
-import (
-	"fmt"
-	"html/template"
-)
+import "html/template"
+
+// Word is one JLPT vocabulary entry: kanji, reading, meaning, level.
+type Word struct {
+	K string `json:"k"`
+	R string `json:"r"`
+	M string `json:"m"`
+	L string `json:"l"`
+}
 
 // AllWords returns the full JLPT word list used for server-side
 // rendering and the /api/kotoba/next endpoint.
@@ -106,22 +111,11 @@ func (w *KotobaWidget) ID() string { return "kotoba" }
 
 func (w *KotobaWidget) Render(ctx RenderContext) (template.HTML, error) {
 	word := words[ctx.RNG.Intn(len(words))]
-	inner := fmt.Sprintf(`
-<div class="kanji-block">
-  <div class="kanji-char" id="kanji-char">
-    <a href="https://jisho.org/search/%s%%20%%23kanji"
-       style="color:inherit;text-decoration:none;">%s</a>
-  </div>
-  <div class="kanji-reading" id="kanji-reading">%s</div>
-  <div class="kanji-divider"></div>
-  <div class="kanji-meta">
-    <span class="kanji-level %s" id="kanji-level">%s</span>
-  </div>
-  <div class="kanji-meaning" id="kanji-meaning">%s</div>
-</div>`, word.K, word.K, word.R, word.L, word.L, word.M)
+	inner, err := renderWidgetTemplate("kotoba.tmpl", word)
+	if err != nil {
+		return "", err
+	}
 	return wrap(ctx, "kotoba", "言葉",
 		`<button class="wt-act" hx-get="/api/widget/kotoba" hx-target="closest .widget" hx-swap="outerHTML" title="next word"><i class="ph-light ph-caret-right"></i></button>`,
-		inner), nil
+		string(inner)), nil
 }
-
-
